@@ -1,0 +1,36 @@
+src:
+  auth:
+    jwt_secret: !env "JWT_SECRET:"
+    jwt_algorithm: !env "JWT_ALGORITHM:"
+  openai:
+    api_key: !env "OPENAI_API_KEY:"
+    base_url: !env "OPENAI_BASE_URL:"
+rewire:
+  log:
+    sinks:
+      - level: !env LOG_LEVEL:TRACE
+rewire_fastapi:
+  server: "uvicorn"
+  app:
+    title: "Dental Reviews"
+  uvicorn:
+    port: 8080
+    host: "0.0.0.0"
+  patch:
+    swagger_hierarchical_tags: true
+    tag_prefixes: true
+  middleware:
+    cors:
+      allow_origins: [ "*" ]
+      allow_methods: [ "*" ]
+      allow_headers: [ "*" ]
+rewire_sqlmodel:
+  url: !pyexec |
+    from os import getenv
+    return getenv("DATABASE_URL").replace("postgresql://", "postgresql+asyncpg://")
+  expire_on_commit: false
+  alembic:
+    generate: true
+    schema_migrations: true
+    env:
+      render_as_batch: true
