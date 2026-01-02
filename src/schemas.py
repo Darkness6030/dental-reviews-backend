@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from src.models import ReviewRequest, Doctor
+from src.models import Complaint, Doctor, Review
 
 
 class LoginRequest(BaseModel):
@@ -21,14 +21,15 @@ class UserResponse(BaseModel):
 
 class DoctorRequest(BaseModel):
     name: str
-    specialty: str
+    role: str
     service_ids: List[int]
 
 
 class DoctorResponse(BaseModel):
     id: int
     name: str
-    specialty: str
+    role: str
+    avatar_url: Optional[str]
     services: List['ServiceResponse']
 
 
@@ -50,22 +51,42 @@ class AspectResponse(BaseModel):
     name: str
 
 
-class PlatformResponse(BaseModel):
-    id: str
+class SourceRequest(BaseModel):
     name: str
-    image_path: str
 
 
-class ReviewsDashboardResponse(BaseModel):
-    total_requests: int
-    total_generated: int
-    total_published: int
-    reviews: List['ReviewResponse']
+class SourceResponse(BaseModel):
+    id: int
+    name: str
 
 
-class ReviewCreateRequest(BaseModel):
-    user_fio: str
-    user_phone: str
+class RewardRequest(BaseModel):
+    name: str
+
+
+class RewardResponse(BaseModel):
+    id: int
+    name: str
+    image_url: Optional[str]
+
+
+class PlatformRequest(BaseModel):
+    name: str
+
+
+class PlatformResponse(BaseModel):
+    id: int
+    name: str
+    image_url: Optional[str]
+
+
+class ReasonRequest(BaseModel):
+    name: str
+
+
+class ReasonResponse(BaseModel):
+    id: int
+    name: str
 
 
 class ReviewDoctorsRequest(BaseModel):
@@ -80,16 +101,45 @@ class ReviewAspectsRequest(BaseModel):
     aspect_ids: List[int]
 
 
+class ReviewSourceRequest(BaseModel):
+    source_id: int
+
+
+class ReviewContactsRequest(BaseModel):
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+
+
+class ReviewRewardRequest(BaseModel):
+    reward_id: int
+
+
 class ReviewResponse(BaseModel):
     id: int
-    user_fio: Optional[str]
-    user_phone: Optional[str]
-    created_at: str
-    selected_doctors: List['DoctorResponse']
-    selected_services: List['ServiceResponse']
-    selected_aspects: List['AspectResponse']
-    published_platforms: List['PlatformResponse']
-    generated_text: Optional[str]
+    contact_name: Optional[str]
+    contact_phone: Optional[str]
+    review_text: Optional[str]
+    selected_doctors: List[DoctorResponse]
+    selected_services: List[ServiceResponse]
+    selected_aspects: List[AspectResponse]
+    selected_source: Optional[SourceResponse]
+    selected_reward: Optional[RewardResponse]
+    published_platforms: List[PlatformResponse]
+
+
+class ComplaintResponse(BaseModel):
+    id: int
+    contact_name: Optional[str]
+    contact_phone: Optional[str]
+    complaint_text: Optional[str]
+    selected_reasons: List[ReasonResponse]
+
+
+class ReviewsDashboardResponse(BaseModel):
+    total_requests: int
+    total_generated: int
+    total_published: int
+    reviews: List['ReviewResponse']
 
 
 def create_doctor_response(doctor: Doctor) -> DoctorResponse:
@@ -99,15 +149,47 @@ def create_doctor_response(doctor: Doctor) -> DoctorResponse:
     )
 
 
-def create_review_response(review_request: ReviewRequest) -> ReviewResponse:
+def create_review_response(review: Review) -> ReviewResponse:
     return ReviewResponse(
-        id=review_request.id,
-        created_at=review_request.created_at.isoformat(),
-        user_fio=review_request.user_fio,
-        user_phone=review_request.user_phone,
-        generated_text=review_request.generated_text,
-        selected_doctors=[create_doctor_response(doctor) for doctor in review_request.selected_doctors],
-        selected_services=[ServiceResponse(**service.model_dump()) for service in review_request.selected_services],
-        selected_aspects=[AspectResponse(**aspect.model_dump()) for aspect in review_request.selected_aspects],
-        published_platforms=[PlatformResponse(**platform.model_dump()) for platform in review_request.published_platforms]
+        id=review.id,
+        contact_name=review.contact_name,
+        contact_phone=review.contact_phone,
+        review_text=review.review_text,
+        selected_doctors=[
+            create_doctor_response(doctor)
+            for doctor in review.selected_doctors
+        ],
+        selected_services=[
+            ServiceResponse(**service.model_dump())
+            for service in review.selected_services
+        ],
+        selected_aspects=[
+            AspectResponse(**aspect.model_dump())
+            for aspect in review.selected_aspects
+        ],
+        selected_source=(
+            SourceResponse(**review.selected_source.model_dump())
+            if review.selected_source else None
+        ),
+        selected_reward=(
+            RewardResponse(**review.selected_reward.model_dump())
+            if review.selected_reward else None
+        ),
+        published_platforms=[
+            PlatformResponse(**platform.model_dump())
+            for platform in review.published_platforms
+        ]
+    )
+
+
+def create_complaint_response(complaint: Complaint) -> ComplaintResponse:
+    return ComplaintResponse(
+        id=complaint.id,
+        contact_name=complaint.contact_name,
+        contact_phone=complaint.contact_phone,
+        complaint_text=complaint.complaint_text,
+        selected_reasons=[
+            ReasonResponse(**reason.model_dump())
+            for reason in complaint.selected_reasons
+        ]
     )

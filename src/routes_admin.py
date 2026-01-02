@@ -1,10 +1,10 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Depends
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from rewire import simple_plugin
-from rewire_sqlmodel import transaction, session_context
+from rewire_sqlmodel import session_context, transaction
 
 from src.auth import admin_required
-from src.models import Doctor, Service, Aspect
-from src.schemas import DoctorRequest, DoctorResponse, ServiceRequest, ServiceResponse, AspectRequest, AspectResponse, create_doctor_response
+from src.models import Aspect, Doctor, Platform, Reason, Reward, Service, Source
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_doctor_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -95,7 +95,6 @@ async def create_aspect(request: AspectRequest) -> AspectResponse:
     aspect = Aspect(**request.model_dump())
     aspect.add()
 
-    await session_context.get().commit()
     return AspectResponse(**aspect.model_dump())
 
 
@@ -120,6 +119,134 @@ async def delete_aspect(aspect_id: int):
         raise HTTPException(404, 'Aspect not found!')
 
     await aspect.delete()
+
+
+@router.post('/sources', response_model=SourceResponse)
+@transaction(1)
+async def create_source(request: SourceRequest) -> SourceResponse:
+    source = Source(**request.model_dump())
+    source.add()
+
+    return SourceResponse(**source.model_dump())
+
+
+@router.post('/sources/{source_id}', response_model=SourceResponse)
+@transaction(1)
+async def update_source(source_id: int, request: SourceRequest) -> SourceResponse:
+    source = await Source.get_by_id(source_id)
+    if not source:
+        raise HTTPException(404, 'Source not found!')
+
+    source.sqlmodel_update(request.model_dump())
+    source.add()
+
+    return SourceResponse(**source.model_dump())
+
+
+@router.delete('/sources/{source_id}', status_code=204)
+@transaction(1)
+async def delete_source(source_id: int):
+    source = await Source.get_by_id(source_id)
+    if not source:
+        raise HTTPException(404, 'Source not found!')
+
+    await source.delete()
+
+
+@router.post('/rewards', response_model=RewardResponse)
+@transaction(1)
+async def create_reward(request: RewardRequest) -> RewardResponse:
+    reward = Reward(**request.model_dump())
+    reward.add()
+
+    return RewardResponse(**reward.model_dump())
+
+
+@router.post('/rewards/{reward_id}', response_model=RewardResponse)
+@transaction(1)
+async def update_reward(reward_id: int, request: RewardRequest) -> RewardResponse:
+    reward = await Reward.get_by_id(reward_id)
+    if not reward:
+        raise HTTPException(404, 'Reward not found!')
+
+    reward.sqlmodel_update(request.model_dump())
+    reward.add()
+
+    return RewardResponse(**reward.model_dump())
+
+
+@router.delete('/rewards/{reward_id}', status_code=204)
+@transaction(1)
+async def delete_reward(reward_id: int):
+    reward = await Reward.get_by_id(reward_id)
+    if not reward:
+        raise HTTPException(404, 'Reward not found!')
+
+    await reward.delete()
+
+
+@router.post('/platforms', response_model=PlatformResponse)
+@transaction(1)
+async def create_platform(request: PlatformRequest) -> PlatformResponse:
+    platform = Platform(**request.model_dump())
+    platform.add()
+
+    return PlatformResponse(**platform.model_dump())
+
+
+@router.post('/platforms/{platform_id}', response_model=PlatformResponse)
+@transaction(1)
+async def update_platform(platform_id: int, request: PlatformRequest) -> PlatformResponse:
+    platform = await Platform.get_by_id(platform_id)
+    if not platform:
+        raise HTTPException(404, 'Platform not found!')
+
+    platform.sqlmodel_update(request.model_dump())
+    platform.add()
+
+    return PlatformResponse(**platform.model_dump())
+
+
+@router.delete('/platforms/{platform_id}', status_code=204)
+@transaction(1)
+async def delete_platform(platform_id: int):
+    platform = await Platform.get_by_id(platform_id)
+    if not platform:
+        raise HTTPException(404, 'Platform not found!')
+
+    await platform.delete()
+
+
+@router.post('/reasons', response_model=ReasonResponse)
+@transaction(1)
+async def create_reason(request: ReasonRequest) -> ReasonResponse:
+    reason = Reason(**request.model_dump())
+    reason.add()
+
+    return ReasonResponse(**reason.model_dump())
+
+
+@router.post('/reasons/{reason_id}', response_model=ReasonResponse)
+@transaction(1)
+async def update_reason(reason_id: int, request: ReasonRequest) -> ReasonResponse:
+    reason = await Reason.get_by_id(reason_id)
+    if not reason:
+        raise HTTPException(404, 'Reason not found!')
+
+    reason.sqlmodel_update(request.model_dump())
+    reason.add()
+
+    return ReasonResponse(**reason.model_dump())
+
+
+@router.delete('/reasons/{reason_id}', status_code=204)
+@transaction(1)
+async def delete_reason(reason_id: int):
+    reason = await Reason.get_by_id(reason_id)
+    if not reason:
+        raise HTTPException(404, 'Reason not found!')
+
+    await reason.delete()
 
 
 @plugin.setup()

@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import List, Optional
 
 import bcrypt
-from rewire_sqlmodel import SQLModel
+from rewire_sqlmodel import SQLModel, transaction
 from sqlmodel import Field, Relationship
 
 
@@ -14,18 +14,21 @@ class User(SQLModel, table=True):
     telegram_id: Optional[int] = None
 
     def __init__(self, username: str, password: str):
-        super().__init__(username=username, password_hash=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode())
+        super().__init__(
+            username=username,
+            password_hash=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        )
 
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode(), self.password_hash.encode())
 
     @classmethod
     async def get_by_id(cls, user_id: int) -> Optional['User']:
-        return await cls.select().where(cls.id == user_id).first()
+        return await cls.select().filter_by(id=user_id).first()
 
     @classmethod
     async def get_by_username(cls, username: str) -> Optional['User']:
-        return await cls.select().where(cls.username == username).first()
+        return await cls.select().filter_by(username=username).first()
 
 
 class DoctorServiceLink(SQLModel, table=True):
@@ -33,30 +36,46 @@ class DoctorServiceLink(SQLModel, table=True):
     service_id: int = Field(foreign_key='service.id', primary_key=True)
 
 
-class ReviewRequestDoctorLink(SQLModel, table=True):
-    review_request_id: int = Field(foreign_key='reviewrequest.id', primary_key=True)
+class ReviewDoctorLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
     doctor_id: int = Field(foreign_key='doctor.id', primary_key=True)
 
 
-class ReviewRequestServiceLink(SQLModel, table=True):
-    review_request_id: int = Field(foreign_key='reviewrequest.id', primary_key=True)
+class ReviewServiceLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
     service_id: int = Field(foreign_key='service.id', primary_key=True)
 
 
-class ReviewRequestAspectLink(SQLModel, table=True):
-    review_request_id: int = Field(foreign_key='reviewrequest.id', primary_key=True)
+class ReviewAspectLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
     aspect_id: int = Field(foreign_key='aspect.id', primary_key=True)
 
 
-class ReviewRequestPlatformLink(SQLModel, table=True):
-    review_request_id: int = Field(foreign_key='reviewrequest.id', primary_key=True)
-    platform_id: str = Field(foreign_key='platform.id', primary_key=True)
+class ReviewSourceLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
+    source_id: int = Field(foreign_key='source.id', primary_key=True)
+
+
+class ReviewRewardLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
+    reward_id: int = Field(foreign_key='reward.id', primary_key=True)
+
+
+class ReviewPlatformLink(SQLModel, table=True):
+    review_id: int = Field(foreign_key='review.id', primary_key=True)
+    platform_id: int = Field(foreign_key='platform.id', primary_key=True)
+
+
+class ComplaintReasonLink(SQLModel, table=True):
+    complaint_id: int = Field(foreign_key='complaint.id', primary_key=True)
+    reason_id: int = Field(foreign_key='reason.id', primary_key=True)
 
 
 class Doctor(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
-    specialty: str
+    role: str
+    avatar_url: Optional[str] = None
 
     services: List['Service'] = Relationship(
         link_model=DoctorServiceLink,
@@ -65,7 +84,7 @@ class Doctor(SQLModel, table=True):
 
     @classmethod
     async def get_by_id(cls, doctor_id: int) -> Optional['Doctor']:
-        return await cls.select().where(cls.id == doctor_id).first()
+        return await cls.select().filter_by(id=doctor_id).first()
 
     @classmethod
     async def get_by_ids(cls, doctor_ids: List[int]) -> List['Doctor']:
@@ -75,6 +94,11 @@ class Doctor(SQLModel, table=True):
     async def get_all(cls) -> List['Doctor']:
         return list(await cls.select().all())
 
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Doctor':
+        return cls(**kwargs).add()
+
 
 class Service(SQLModel, table=True):
     id: int = Field(primary_key=True)
@@ -82,15 +106,31 @@ class Service(SQLModel, table=True):
 
     @classmethod
     async def get_by_id(cls, service_id: int) -> Optional['Service']:
-        return await cls.select().where(cls.id == service_id).first()
+        return await cls.select().filter_by(id=service_id).first()
 
     @classmethod
     async def get_by_ids(cls, service_ids: List[int]) -> List['Service']:
         return list(await cls.select().where(cls.id.in_(service_ids)).all())
 
     @classmethod
+    async def get_by_doctor_ids(cls, doctor_ids: List[int]) -> List['Service']:
+        query = (
+            cls.select()
+            .join(DoctorServiceLink, DoctorServiceLink.service_id == cls.id)  # type: ignore
+            .where(DoctorServiceLink.doctor_id.in_(doctor_ids))
+            .distinct()
+        )
+
+        return list(await query.all())
+
+    @classmethod
     async def get_all(cls) -> List['Service']:
         return list(await cls.select().all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Service':
+        return cls(**kwargs).add()
 
 
 class Aspect(SQLModel, table=True):
@@ -99,7 +139,7 @@ class Aspect(SQLModel, table=True):
 
     @classmethod
     async def get_by_id(cls, aspect_id: int) -> Optional['Aspect']:
-        return await cls.select().where(cls.id == aspect_id).first()
+        return await cls.select().filter_by(id=aspect_id).first()
 
     @classmethod
     async def get_by_ids(cls, aspect_ids: List[int]) -> List['Aspect']:
@@ -109,60 +149,183 @@ class Aspect(SQLModel, table=True):
     async def get_all(cls) -> List['Aspect']:
         return list(await cls.select().all())
 
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Aspect':
+        return cls(**kwargs).add()
 
-class Platform(SQLModel, table=True):
-    id: str = Field(primary_key=True)
+
+class Source(SQLModel, table=True):
+    id: int = Field(primary_key=True)
     name: str
-    image_path: str
 
     @classmethod
-    async def get_by_id(cls, platform_id: str) -> Optional['Platform']:
-        return await cls.select().where(cls.id == platform_id).first()
+    async def get_by_id(cls, source_id: int) -> Optional['Source']:
+        return await cls.select().filter_by(id=source_id).first()
+
+    @classmethod
+    async def get_by_ids(cls, source_ids: List[int]) -> List['Source']:
+        return list(await cls.select().where(cls.id.in_(source_ids)).all())
+
+    @classmethod
+    async def get_all(cls) -> List['Source']:
+        return list(await cls.select().all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Source':
+        return cls(**kwargs).add()
+
+
+class Reward(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    name: str
+    image_url: Optional[str] = None
+
+    @classmethod
+    async def get_by_id(cls, reward_id: int) -> Optional['Reward']:
+        return await cls.select().filter_by(id=reward_id).first()
+
+    @classmethod
+    async def get_by_ids(cls, reward_ids: List[int]) -> List['Reward']:
+        return list(await cls.select().where(cls.id.in_(reward_ids)).all())
+
+    @classmethod
+    async def get_all(cls) -> List['Reward']:
+        return list(await cls.select().all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Reward':
+        return cls(**kwargs).add()
+
+
+class Platform(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    name: str
+    image_url: Optional[str] = None
+
+    @classmethod
+    async def get_by_id(cls, platform_id: int) -> Optional['Platform']:
+        return await cls.select().filter_by(id=platform_id).first()
+
+    @classmethod
+    async def get_by_ids(cls, platform_ids: List[int]) -> List['Platform']:
+        return list(await cls.select().where(cls.id.in_(platform_ids)).all())
 
     @classmethod
     async def get_all(cls) -> List['Platform']:
         return list(await cls.select().all())
 
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Platform':
+        return cls(**kwargs).add()
 
-class ReviewRequest(SQLModel, table=True):
+
+class Reason(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    name: str
+
+    @classmethod
+    async def get_by_id(cls, reason_id: int) -> Optional['Reason']:
+        return await cls.select().filter_by(id=reason_id).first()
+
+    @classmethod
+    async def get_by_ids(cls, reason_ids: List[int]) -> List['Reason']:
+        return list(await cls.select().where(cls.id.in_(reason_ids)).all())
+
+    @classmethod
+    async def get_all(cls) -> List['Reason']:
+        return list(await cls.select().all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Reason':
+        return cls(**kwargs).add()
+
+
+class Review(SQLModel, table=True):
     id: int = Field(primary_key=True, default=None)
     created_at: datetime = Field(default_factory=datetime.now)
 
-    user_fio: Optional[str] = None
-    user_phone: Optional[str] = None
-    generated_text: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    review_text: Optional[str] = None
 
     selected_doctors: List[Doctor] = Relationship(
-        link_model=ReviewRequestDoctorLink,
+        link_model=ReviewDoctorLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
     selected_services: List[Service] = Relationship(
-        link_model=ReviewRequestServiceLink,
+        link_model=ReviewServiceLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
     selected_aspects: List[Aspect] = Relationship(
-        link_model=ReviewRequestAspectLink,
+        link_model=ReviewAspectLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
-    published_platforms: List['Platform'] = Relationship(
-        link_model=ReviewRequestPlatformLink,
+    selected_source: Optional[Source] = Relationship(
+        link_model=ReviewSourceLink,
+        sa_relationship_kwargs={'lazy': 'selectin'}
+    )
+
+    selected_reward: Optional[Reward] = Relationship(
+        link_model=ReviewRewardLink,
+        sa_relationship_kwargs={'lazy': 'selectin'}
+    )
+
+    published_platforms: List[Platform] = Relationship(
+        link_model=ReviewPlatformLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
     @classmethod
-    async def get_by_id(cls, request_id: int) -> Optional['ReviewRequest']:
-        return await cls.select().where(cls.id == request_id).first()
+    async def get_by_id(cls, review_id: int) -> Optional['Review']:
+        return await cls.select().filter_by(id=review_id).first()
 
     @classmethod
-    async def get_all(cls, date_before: Optional[datetime] = None, date_after: Optional[datetime] = None) -> List['ReviewRequest']:
+    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Review']:
         query = cls.select()
-        if date_before:
-            query = query.where(cls.created_at <= date_before)
-
         if date_after:
             query = query.where(cls.created_at >= date_after)
 
+        if date_before:
+            query = query.where(cls.created_at <= date_before)
+
         return list(await query.all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Review':
+        return cls(**kwargs).add()
+
+
+class Complaint(SQLModel, table=True):
+    id: int = Field(primary_key=True, default=None)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    contact_name: Optional[str] = None
+    contact_phone: Optional[str] = None
+    complaint_text: Optional[str] = None
+
+    selected_reasons: List[Reason] = Relationship(
+        link_model=ComplaintReasonLink,
+        sa_relationship_kwargs={'lazy': 'selectin'}
+    )
+
+    @classmethod
+    async def get_by_id(cls, complaint_id: int) -> Optional['Complaint']:
+        return await cls.select().filter_by(id=complaint_id).first()
+
+    @classmethod
+    async def get_all(cls) -> List['Complaint']:
+        return list(await cls.select().all())
+
+    @classmethod
+    @transaction(1)
+    async def create(cls, **kwargs) -> 'Complaint':
+        return cls(**kwargs).add()
