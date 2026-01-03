@@ -1,10 +1,13 @@
+from datetime import datetime
+from typing import Optional
+
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src.auth import admin_required
-from src.models import Aspect, Doctor, Platform, Reason, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_doctor_response
+from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_complaint_response, create_doctor_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -95,6 +98,7 @@ async def create_aspect(request: AspectRequest) -> AspectResponse:
     aspect = Aspect(**request.model_dump())
     aspect.add()
 
+    await session_context.get().commit()
     return AspectResponse(**aspect.model_dump())
 
 
@@ -127,6 +131,7 @@ async def create_source(request: SourceRequest) -> SourceResponse:
     source = Source(**request.model_dump())
     source.add()
 
+    await session_context.get().commit()
     return SourceResponse(**source.model_dump())
 
 
@@ -159,6 +164,7 @@ async def create_reward(request: RewardRequest) -> RewardResponse:
     reward = Reward(**request.model_dump())
     reward.add()
 
+    await session_context.get().commit()
     return RewardResponse(**reward.model_dump())
 
 
@@ -191,6 +197,7 @@ async def create_platform(request: PlatformRequest) -> PlatformResponse:
     platform = Platform(**request.model_dump())
     platform.add()
 
+    await session_context.get().commit()
     return PlatformResponse(**platform.model_dump())
 
 
@@ -223,6 +230,7 @@ async def create_reason(request: ReasonRequest) -> ReasonResponse:
     reason = Reason(**request.model_dump())
     reason.add()
 
+    await session_context.get().commit()
     return ReasonResponse(**reason.model_dump())
 
 
@@ -247,6 +255,18 @@ async def delete_reason(reason_id: int):
         raise HTTPException(404, 'Reason not found!')
 
     await reason.delete()
+
+
+@router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)
+@transaction(1)
+async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
+    reviews = await Review.get_all(date_after, date_before)
+    complaints = await Complaint.get_all(date_after, date_before)
+
+    return ReviewsDashboardResponse(
+        reviews=[create_review_response(review) for review in reviews],
+        complaints=[create_complaint_response(complaint) for complaint in complaints]
+    )
 
 
 @plugin.setup()

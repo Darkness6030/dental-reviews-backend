@@ -3,22 +3,25 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from rewire import simple_plugin
-from rewire_sqlmodel import transaction
+from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
 from src.auth import user_required
-from src.models import Aspect, Doctor, Platform, Review, Reward, Service, Source
-from src.schemas import ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewsDashboardResponse, create_review_response
+from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source
+from src.schemas import CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest, ReviewsDashboardResponse, create_complaint_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/reviews', tags=['Reviews'])
 
 
-@router.post('', response_model=ReviewResponse)
+@router.post('', response_model=CreateReviewResponse)
 @transaction(1)
-async def create_review() -> ReviewResponse:
-    review = await Review.create()
-    return create_review_response(review)
+async def create_review() -> CreateReviewResponse:
+    review = Review()
+    review.add()
+
+    await session_context.get().commit()
+    return CreateReviewResponse(**review.model_dump())
 
 
 @router.get('/{review_id}', response_model=ReviewResponse)
@@ -113,9 +116,22 @@ async def set_review_contacts(review_id: int, request: ReviewContactsRequest) ->
     return create_review_response(review)
 
 
+@router.post('/{review_id}/text', response_model=ReviewResponse)
+@transaction(1)
+async def update_review_text(review_id: int, request: ReviewTextRequest) -> ReviewResponse:
+    review = await Review.get_by_id(review_id)
+    if not review:
+        raise HTTPException(404, 'Review not found!')
+
+    review.review_text = request.review_text
+    review.add()
+
+    return create_review_response(review)
+
+
 @router.post('/{review_id}/generate', response_model=ReviewResponse)
 @transaction(1)
-async def generate_review(review_id: int) -> ReviewResponse:
+async def generate_review_text(review_id: int) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
     if not review:
         raise HTTPException(404, 'Review not found!')
@@ -124,6 +140,7 @@ async def generate_review(review_id: int) -> ReviewResponse:
         doctors=review.selected_doctors,
         services=review.selected_services,
         aspects=review.selected_aspects,
+        source=review.selected_source
     )
 
     review.review_text = review_text
@@ -167,16 +184,20 @@ async def add_review_platform(review_id: int, platform_id: int) -> ReviewRespons
     return create_review_response(review)
 
 
-@router.get('/dashboard', response_model=ReviewsDashboardResponse, dependencies=[Depends(user_required)])
+@router.post('/complaint', response_model=CreateComplaintResponse)
 @transaction(1)
-async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
-    reviews = await Review.get_all(date_after, date_before)
-    return ReviewsDashboardResponse(
-        total_requests=len(reviews),
-        total_generated=sum(1 for review in reviews if review.review_text),
-        total_published=sum(1 for review in reviews if review.published_platforms),
-        reviews=[create_review_response(review) for review in reviews]
-    )
+async def create_complaint(request: CreateComplaintRequest) -> CreateComplaintResponse:
+    reasons = await Reason.get_by_ids(request.reason_ids)
+    if not reasons:
+        raise HTTPException(400, 'Reasons not found!')
+
+    complaint = Complaint(**request.model_dump(), selected_reasons=reasons)
+    complaint.add()
+
+    await session_context.get().commit()
+    return CreateComplaintResponse(**complaint.model_dump())
+
+
 
 
 @plugin.setup()

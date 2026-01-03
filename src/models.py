@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 
 import bcrypt
-from rewire_sqlmodel import SQLModel, transaction
+from rewire_sqlmodel import SQLModel
 from sqlmodel import Field, Relationship
 
 
@@ -94,11 +94,6 @@ class Doctor(SQLModel, table=True):
     async def get_all(cls) -> List['Doctor']:
         return list(await cls.select().all())
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Doctor':
-        return cls(**kwargs).add()
-
 
 class Service(SQLModel, table=True):
     id: int = Field(primary_key=True)
@@ -127,11 +122,6 @@ class Service(SQLModel, table=True):
     async def get_all(cls) -> List['Service']:
         return list(await cls.select().all())
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Service':
-        return cls(**kwargs).add()
-
 
 class Aspect(SQLModel, table=True):
     id: int = Field(primary_key=True)
@@ -149,11 +139,6 @@ class Aspect(SQLModel, table=True):
     async def get_all(cls) -> List['Aspect']:
         return list(await cls.select().all())
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Aspect':
-        return cls(**kwargs).add()
-
 
 class Source(SQLModel, table=True):
     id: int = Field(primary_key=True)
@@ -170,11 +155,6 @@ class Source(SQLModel, table=True):
     @classmethod
     async def get_all(cls) -> List['Source']:
         return list(await cls.select().all())
-
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Source':
-        return cls(**kwargs).add()
 
 
 class Reward(SQLModel, table=True):
@@ -194,15 +174,11 @@ class Reward(SQLModel, table=True):
     async def get_all(cls) -> List['Reward']:
         return list(await cls.select().all())
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Reward':
-        return cls(**kwargs).add()
-
 
 class Platform(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    url: str
     image_url: Optional[str] = None
 
     @classmethod
@@ -216,11 +192,6 @@ class Platform(SQLModel, table=True):
     @classmethod
     async def get_all(cls) -> List['Platform']:
         return list(await cls.select().all())
-
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Platform':
-        return cls(**kwargs).add()
 
 
 class Reason(SQLModel, table=True):
@@ -238,11 +209,6 @@ class Reason(SQLModel, table=True):
     @classmethod
     async def get_all(cls) -> List['Reason']:
         return list(await cls.select().all())
-
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Reason':
-        return cls(**kwargs).add()
 
 
 class Review(SQLModel, table=True):
@@ -298,11 +264,6 @@ class Review(SQLModel, table=True):
 
         return list(await query.all())
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Review':
-        return cls(**kwargs).add()
-
 
 class Complaint(SQLModel, table=True):
     id: int = Field(primary_key=True, default=None)
@@ -322,10 +283,12 @@ class Complaint(SQLModel, table=True):
         return await cls.select().filter_by(id=complaint_id).first()
 
     @classmethod
-    async def get_all(cls) -> List['Complaint']:
-        return list(await cls.select().all())
+    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Complaint']:
+        query = cls.select()
+        if date_after:
+            query = query.where(cls.created_at >= date_after)
 
-    @classmethod
-    @transaction(1)
-    async def create(cls, **kwargs) -> 'Complaint':
-        return cls(**kwargs).add()
+        if date_before:
+            query = query.where(cls.created_at <= date_before)
+
+        return list(await query.all())

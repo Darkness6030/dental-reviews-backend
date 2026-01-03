@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
 class DoctorRequest(BaseModel):
     name: str
     role: str
+    avatar_url: Optional[str] = None
     service_ids: List[int]
 
 
@@ -62,6 +63,7 @@ class SourceResponse(BaseModel):
 
 class RewardRequest(BaseModel):
     name: str
+    image_url: Optional[str] = None
 
 
 class RewardResponse(BaseModel):
@@ -72,11 +74,14 @@ class RewardResponse(BaseModel):
 
 class PlatformRequest(BaseModel):
     name: str
+    url: str
+    image_url: Optional[str] = None
 
 
 class PlatformResponse(BaseModel):
     id: int
     name: str
+    url: str
     image_url: Optional[str]
 
 
@@ -110,8 +115,16 @@ class ReviewContactsRequest(BaseModel):
     contact_phone: Optional[str] = None
 
 
+class ReviewTextRequest(BaseModel):
+    review_text: str
+
+
 class ReviewRewardRequest(BaseModel):
     reward_id: int
+
+
+class CreateReviewResponse(BaseModel):
+    id: int
 
 
 class ReviewResponse(BaseModel):
@@ -127,6 +140,17 @@ class ReviewResponse(BaseModel):
     published_platforms: List[PlatformResponse]
 
 
+class CreateComplaintRequest(BaseModel):
+    contact_name: str
+    contact_phone: str
+    complaint_text: str
+    reason_ids: List[int]
+
+
+class CreateComplaintResponse(BaseModel):
+    id: int
+
+
 class ComplaintResponse(BaseModel):
     id: int
     contact_name: Optional[str]
@@ -136,10 +160,8 @@ class ComplaintResponse(BaseModel):
 
 
 class ReviewsDashboardResponse(BaseModel):
-    total_requests: int
-    total_generated: int
-    total_published: int
     reviews: List['ReviewResponse']
+    complaints: List['ComplaintResponse']
 
 
 def create_doctor_response(doctor: Doctor) -> DoctorResponse:
