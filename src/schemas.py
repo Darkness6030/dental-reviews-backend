@@ -19,6 +19,11 @@ class UserResponse(BaseModel):
     is_admin: bool
 
 
+class UploadImageResponse(BaseModel):
+    filename: str
+    image_url: str
+
+
 class DoctorRequest(BaseModel):
     name: str
     role: str

@@ -10,6 +10,8 @@ services:
       - database
     ports:
       - "8080:8080"
+    volumes:
+      - images_data:/app/images
     restart: unless-stopped
 
   database:
@@ -26,4 +28,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  images_data:
   postgres_data:
