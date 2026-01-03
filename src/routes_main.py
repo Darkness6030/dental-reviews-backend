@@ -12,7 +12,7 @@ from src.models import Aspect, Doctor, Platform, Reason, Reward, Service, Source
 from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse, create_doctor_response
 
 plugin = simple_plugin()
-router = APIRouter(tags=['Main'])
+router = APIRouter(prefix='/api', tags=['Main'])
 
 
 @router.post('/login', response_model=LoginResponse)

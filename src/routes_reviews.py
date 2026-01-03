@@ -1,17 +1,13 @@
-from datetime import datetime
-from typing import Optional
-
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
-from src.auth import user_required
 from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source
-from src.schemas import CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest, ReviewsDashboardResponse, create_complaint_response, create_review_response
+from src.schemas import CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest, create_review_response
 
 plugin = simple_plugin()
-router = APIRouter(prefix='/reviews', tags=['Reviews'])
+router = APIRouter(prefix='/api/reviews', tags=['Reviews'])
 
 
 @router.post('', response_model=CreateReviewResponse)
@@ -196,8 +192,6 @@ async def create_complaint(request: CreateComplaintRequest) -> CreateComplaintRe
 
     await session_context.get().commit()
     return CreateComplaintResponse(**complaint.model_dump())
-
-
 
 
 @plugin.setup()

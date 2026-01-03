@@ -11,7 +11,7 @@ from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResp
 
 plugin = simple_plugin()
 router = APIRouter(
-    prefix='/admin',
+    prefix='/api/admin',
     tags=['Admin'],
     dependencies=[Depends(admin_required)]
 )
