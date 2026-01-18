@@ -99,6 +99,17 @@ class ReasonResponse(BaseModel):
     name: str
 
 
+class OwnerRequest(BaseModel):
+    name: str
+    avatar_url: Optional[str]
+
+
+class OwnerResponse(BaseModel):
+    id: int
+    name: str
+    avatar_url: Optional[str]
+
+
 class ReviewDoctorsRequest(BaseModel):
     doctor_ids: List[int]
 

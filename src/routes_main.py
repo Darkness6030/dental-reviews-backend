@@ -11,8 +11,8 @@ from starlette.responses import FileResponse
 
 from src import auth
 from src.auth import user_required
-from src.models import Aspect, Doctor, Platform, Reason, Reward, Service, Source, User
-from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UploadImageResponse, UserResponse, create_doctor_response
+from src.models import Aspect, Doctor, Owner, Platform, Reason, Reward, Service, Source, User
+from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, OwnerResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UploadImageResponse, UserResponse, create_doctor_response
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
@@ -105,6 +105,16 @@ async def get_reasons() -> List[ReasonResponse]:
         ReasonResponse(**reason.model_dump())
         for reason in await Reason.get_all()
     ]
+
+
+@router.get('/owner', response_model=OwnerResponse)
+@transaction(1)
+async def get_owner() -> OwnerResponse:
+    owner = await Owner.get()
+    if not owner:
+        raise HTTPException(404, 'Owner not found!')
+
+    return OwnerResponse(**owner.model_dump())
 
 
 @router.post('/images/upload')

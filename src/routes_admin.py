@@ -6,8 +6,8 @@ from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src.auth import admin_required
-from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.models import Aspect, Complaint, Doctor, Owner, Platform, Reason, Review, Reward, Service, Source
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_complaint_response, create_doctor_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -255,6 +255,30 @@ async def delete_reason(reason_id: int):
         raise HTTPException(404, 'Reason not found!')
 
     await reason.delete()
+
+
+@router.post('/owner', response_model=OwnerResponse)
+@transaction(1)
+async def update_owner(request: OwnerRequest):
+    owner = await Owner.get()
+    if not owner:
+        owner = Owner(**request.model_dump())
+        owner.add()
+    else:
+        owner.sqlmodel_update(request.model_dump())
+        owner.add()
+
+    await session_context.get().commit()
+    return OwnerResponse(**owner.model_dump())
+
+
+@router.delete('/owner', status_code=204)
+async def delete_owner():
+    owner = await Owner.get()
+    if not owner:
+        raise HTTPException(404, 'Owner not found!')
+
+    await owner.delete()
 
 
 @router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)

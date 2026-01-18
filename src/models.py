@@ -211,6 +211,16 @@ class Reason(SQLModel, table=True):
         return list(await cls.select().all())
 
 
+class Owner(SQLModel, table=True):
+    id: int = Field(primary_key=True)
+    name: str
+    avatar_url: Optional[str] = None
+
+    @classmethod
+    async def get(cls) -> Optional['Owner']:
+        return await cls.select().first()
+
+
 class Review(SQLModel, table=True):
     id: int = Field(primary_key=True, default=None)
     created_at: datetime = Field(default_factory=datetime.now)
