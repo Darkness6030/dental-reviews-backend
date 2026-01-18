@@ -18,6 +18,12 @@ plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
 
 
+@router.get('/user', response_model=UserResponse)
+@transaction(1)
+async def get_user(user: User = Depends(user_required)) -> UserResponse:
+    return UserResponse(**user.model_dump())
+
+
 @router.post('/login', response_model=LoginResponse)
 @transaction(1)
 async def login(request: LoginRequest) -> LoginResponse:
@@ -25,14 +31,10 @@ async def login(request: LoginRequest) -> LoginResponse:
     if not user or not user.check_password(request.password):
         raise HTTPException(401, 'Invalid username or password!')
 
-    access_token = auth.generate_access_token(user.id)
-    return LoginResponse(access_token=access_token)
-
-
-@router.get('/user', response_model=UserResponse)
-@transaction(1)
-async def get_user(user: User = Depends(user_required)) -> UserResponse:
-    return UserResponse(**user.model_dump())
+    return LoginResponse(
+        user=UserResponse(**user.model_dump()),
+        access_token=auth.generate_access_token(user.id)
+    )
 
 
 @router.get('/doctors', response_model=List[DoctorResponse])

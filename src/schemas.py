@@ -5,18 +5,20 @@ from pydantic import BaseModel
 from src.models import Complaint, Doctor, Review
 
 
+class UserResponse(BaseModel):
+    name: str
+    username: str
+    is_admin: bool
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
 
 
 class LoginResponse(BaseModel):
+    user: UserResponse
     access_token: str
-
-
-class UserResponse(BaseModel):
-    username: str
-    is_admin: bool
 
 
 class UploadImageResponse(BaseModel):
