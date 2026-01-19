@@ -271,6 +271,7 @@ async def update_owner(request: OwnerRequest):
 
 
 @router.delete('/owner', status_code=204)
+@transaction(1)
 async def delete_owner():
     owner = await Owner.get()
     if not owner:
