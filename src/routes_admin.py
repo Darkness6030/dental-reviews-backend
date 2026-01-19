@@ -292,6 +292,7 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
 
 
 @router.post('/images/upload')
+@transaction(1)
 async def upload_image_file(request: Request, file: UploadFile = File(...)):
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail='Only image files are allowed!')
