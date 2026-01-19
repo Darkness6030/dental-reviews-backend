@@ -103,12 +103,14 @@ class ReasonResponse(BaseModel):
 
 class OwnerRequest(BaseModel):
     name: str
+    title: str
     avatar_url: Optional[str]
 
 
 class OwnerResponse(BaseModel):
     id: int
     name: str
+    title: str
     avatar_url: Optional[str]
 
 

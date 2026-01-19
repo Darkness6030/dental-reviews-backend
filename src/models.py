@@ -215,6 +215,7 @@ class Reason(SQLModel, table=True):
 class Owner(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    title: str
     avatar_url: Optional[str] = None
 
     @classmethod
