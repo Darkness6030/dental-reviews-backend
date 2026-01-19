@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from typing import List, Optional
 
 import bcrypt
@@ -268,9 +268,11 @@ class Review(SQLModel, table=True):
     async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Review']:
         query = cls.select()
         if date_after:
+            date_after = datetime.combine(date_after, time.min)
             query = query.where(cls.created_at >= date_after)
 
         if date_before:
+            date_before = datetime.combine(date_before, time.max)
             query = query.where(cls.created_at <= date_before)
 
         return list(await query.all())
@@ -297,9 +299,11 @@ class Complaint(SQLModel, table=True):
     async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Complaint']:
         query = cls.select()
         if date_after:
+            date_after = datetime.combine(date_after, time.min)
             query = query.where(cls.created_at >= date_after)
 
         if date_before:
+            date_before = datetime.combine(date_before, time.max)
             query = query.where(cls.created_at <= date_before)
 
         return list(await query.all())
