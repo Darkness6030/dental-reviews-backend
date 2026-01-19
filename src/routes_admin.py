@@ -1,13 +1,17 @@
+import os
+import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+import aiofiles
+from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
+from starlette.requests import Request
 
 from src.auth import admin_required
 from src.models import Aspect, Complaint, Doctor, Owner, Platform, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -21,9 +25,6 @@ router = APIRouter(
 @transaction(1)
 async def create_doctor(request: DoctorRequest) -> DoctorResponse:
     services = await Service.get_by_ids(request.service_ids)
-    if not services:
-        raise HTTPException(404, 'No services found!')
-
     doctor = Doctor(**request.model_dump(), services=services)
     doctor.add()
 
@@ -39,9 +40,6 @@ async def update_doctor(doctor_id: int, request: DoctorRequest) -> DoctorRespons
         raise HTTPException(404, 'Doctor not found!')
 
     services = await Service.get_by_ids(request.service_ids)
-    if not services:
-        raise HTTPException(404, 'No services found!')
-
     doctor.sqlmodel_update(request.model_dump())
     doctor.services = services
     doctor.add()
@@ -290,6 +288,25 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     return ReviewsDashboardResponse(
         reviews=[create_review_response(review) for review in reviews],
         complaints=[create_complaint_response(complaint) for complaint in complaints]
+    )
+
+
+@router.post('/images/upload')
+async def upload_image_file(request: Request, file: UploadFile = File(...)):
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail='Only image files are allowed!')
+
+    extension = os.path.splitext(file.filename)[1]
+    filename = f'{uuid.uuid4().hex}{extension}'
+
+    file_path = os.path.join('images', filename)
+    async with aiofiles.open(file_path, 'wb') as output_file:
+        await output_file.write(await file.read())
+
+    base_url = str(request.base_url).rstrip('/')
+    return UploadImageResponse(
+        filename=filename,
+        image_url=f'{base_url}/api/images/{filename}'
     )
 
 

@@ -1,18 +1,15 @@
 import os
-import uuid
 from typing import List
 
-import aiofiles
-from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from rewire import simple_plugin
 from rewire_sqlmodel import transaction
-from starlette.requests import Request
 from starlette.responses import FileResponse
 
 from src import auth
 from src.auth import user_required
 from src.models import Aspect, Doctor, Owner, Platform, Reason, Reward, Service, Source, User
-from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, OwnerResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UploadImageResponse, UserResponse, create_doctor_response
+from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, OwnerResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse, create_doctor_response
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
@@ -117,25 +114,6 @@ async def get_owner() -> OwnerResponse:
         raise HTTPException(404, 'Owner not found!')
 
     return OwnerResponse(**owner.model_dump())
-
-
-@router.post('/images/upload')
-async def upload_image_file(request: Request, file: UploadFile = File(...)):
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail='Only image files are allowed!')
-
-    extension = os.path.splitext(file.filename)[1]
-    filename = f'{uuid.uuid4().hex}{extension}'
-
-    file_path = os.path.join('images', filename)
-    async with aiofiles.open(file_path, 'wb') as output_file:
-        await output_file.write(await file.read())
-
-    base_url = str(request.base_url).rstrip('/')
-    return UploadImageResponse(
-        filename=filename,
-        image_url=f'{base_url}/api/images/{filename}'
-    )
 
 
 @router.get('/images/{image_path}', response_class=FileResponse)
