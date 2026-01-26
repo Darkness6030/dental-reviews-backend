@@ -9,9 +9,10 @@ from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
 
+from src import chatgpt
 from src.auth import admin_required
 from src.models import Aspect, Complaint, Doctor, Owner, Platform, Prompt, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -312,6 +313,18 @@ async def update_prompt(request: PromptRequest) -> PromptResponse:
 
     await session_context.get().commit()
     return PromptResponse(**prompt.model_dump())
+
+
+@router.post('/prompts/test', response_model=PromptTestResponse)
+@transaction(1)
+async def test_prompt(request: PromptRequest) -> PromptTestResponse:
+    generated_text = await chatgpt.test_prompt_text(
+        prompt_text=request.prompt_text,
+        temperature=request.temperature,
+        frequency_penalty=request.frequency_penalty,
+    )
+
+    return PromptTestResponse(generated_text=generated_text)
 
 
 @router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)

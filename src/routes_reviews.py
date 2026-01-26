@@ -137,7 +137,9 @@ async def generate_review_text(review_id: int) -> ReviewResponse:
         raise HTTPException(404, 'Reviews prompt not found!')
 
     review_text = await chatgpt.generate_review_text(
-        reviews_prompt=reviews_prompt,
+        prompt_text=reviews_prompt.prompt_text,
+        temperature=reviews_prompt.temperature,
+        frequency_penalty=reviews_prompt.frequency_penalty,
         doctors=review.selected_doctors,
         services=review.selected_services,
         aspects=review.selected_aspects,

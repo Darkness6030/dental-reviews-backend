@@ -4,7 +4,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from rewire import config
 
-from src.models import Aspect, Doctor, Prompt, Service, Source
+from src.models import Aspect, Doctor, Service, Source
 
 
 @config
@@ -26,6 +26,12 @@ REVIEWS_USER_PROMPT = '''
 {doctors_text}
 - Что особенно понравилось во время визита: {aspects_text}
 - Откуда узнал(а) о клинике: {source_text}
+'''
+
+TEST_USER_PROMPT = '''
+Самостоятельно придумай весь контекст для ответа.
+Сгенерируй полноценный ответ, следуя всем системным инструкциям, как будто был получен контекст от пользователя.
+Придумай конкретные имена, услуги, аспекты, источник, откуда узнал и т.д.
 '''
 
 
@@ -69,7 +75,9 @@ def build_review_user_prompt(
 
 
 async def generate_review_text(
-    reviews_prompt: Prompt,
+    prompt_text: str,
+    temperature: float,
+    frequency_penalty: float,
     doctors: List[Doctor],
     services: List[Service],
     aspects: List[Aspect],
@@ -84,11 +92,25 @@ async def generate_review_text(
 
     response = await CLIENT.chat.completions.create(
         model=f'gpt://{Config.project}/yandexgpt/latest',
-        temperature=reviews_prompt.temperature,
-        frequency_penalty=reviews_prompt.frequency_penalty,
+        temperature=temperature,
+        frequency_penalty=frequency_penalty,
         messages=[
-            {'role': 'system', 'content': reviews_prompt.prompt_text},
+            {'role': 'system', 'content': prompt_text},
             {'role': 'user', 'content': user_prompt}
+        ]
+    )
+
+    return response.choices[0].message.content.strip()
+
+
+async def test_prompt_text(prompt_text: str, temperature: float, frequency_penalty: float):
+    response = await CLIENT.chat.completions.create(
+        model=f'gpt://{Config.project}/yandexgpt/latest',
+        temperature=temperature,
+        frequency_penalty=frequency_penalty,
+        messages=[
+            {'role': 'system', 'content': prompt_text},
+            {'role': 'user', 'content': TEST_USER_PROMPT}
         ]
     )
 

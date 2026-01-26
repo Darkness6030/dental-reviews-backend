@@ -120,12 +120,18 @@ class PromptRequest(BaseModel):
     id: str
     prompt_text: str
     temperature: float
+    frequency_penalty: float
 
 
 class PromptResponse(BaseModel):
     id: str
     prompt_text: str
     temperature: float
+    frequency_penalty: float
+
+
+class PromptTestResponse(BaseModel):
+    generated_text: str
 
 
 class ReviewDoctorsRequest(BaseModel):
