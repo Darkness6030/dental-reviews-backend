@@ -85,6 +85,7 @@ async def generate_review_text(
     response = await CLIENT.chat.completions.create(
         model=f'gpt://{Config.project}/yandexgpt/latest',
         temperature=reviews_prompt.temperature,
+        frequency_penalty=reviews_prompt.frequency_penalty,
         messages=[
             {'role': 'system', 'content': reviews_prompt.prompt_text},
             {'role': 'user', 'content': user_prompt}

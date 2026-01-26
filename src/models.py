@@ -230,6 +230,7 @@ class Prompt(SQLModel, table=True):
 
     prompt_text: str
     temperature: float
+    frequency_penalty: float
 
     @classmethod
     async def get_by_id(cls, prompt_id: str) -> Optional['Prompt']:
