@@ -224,8 +224,24 @@ class Owner(SQLModel, table=True):
         return await cls.select().first()
 
 
+class Prompt(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.now)
+
+    prompt_text: str
+    temperature: float
+
+    @classmethod
+    async def get_by_id(cls, prompt_id: str) -> Optional['Prompt']:
+        return await cls.select().filter_by(id=prompt_id).first()
+
+    @classmethod
+    async def get_all(cls) -> List['Prompt']:
+        return list(await cls.select().all())
+
+
 class Review(SQLModel, table=True):
-    id: int = Field(primary_key=True, default=None)
+    id: int = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
     contact_name: Optional[str] = None
@@ -281,7 +297,7 @@ class Review(SQLModel, table=True):
 
 
 class Complaint(SQLModel, table=True):
-    id: int = Field(primary_key=True, default=None)
+    id: int = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
     contact_name: Optional[str] = None

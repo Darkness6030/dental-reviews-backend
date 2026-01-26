@@ -3,7 +3,7 @@ from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
-from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source
+from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source
 from src.schemas import CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest, create_review_response
 
 plugin = simple_plugin()
@@ -132,7 +132,12 @@ async def generate_review_text(review_id: int) -> ReviewResponse:
     if not review:
         raise HTTPException(404, 'Review not found!')
 
+    reviews_prompt = await Prompt.get_by_id('reviews')
+    if not reviews_prompt:
+        raise HTTPException(404, 'Reviews prompt not found!')
+
     review_text = await chatgpt.generate_review_text(
+        reviews_prompt=reviews_prompt,
         doctors=review.selected_doctors,
         services=review.selected_services,
         aspects=review.selected_aspects,

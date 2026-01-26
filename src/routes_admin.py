@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 import aiofiles
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
@@ -10,8 +10,8 @@ from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
 
 from src.auth import admin_required
-from src.models import Aspect, Complaint, Doctor, Owner, Platform, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.models import Aspect, Complaint, Doctor, Owner, Platform, Prompt, Reason, Review, Reward, Service, Source
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -257,7 +257,7 @@ async def delete_reason(reason_id: int):
 
 @router.post('/owner', response_model=OwnerResponse)
 @transaction(1)
-async def update_owner(request: OwnerRequest):
+async def update_owner(request: OwnerRequest) -> OwnerResponse:
     owner = await Owner.get()
     if not owner:
         owner = Owner(**request.model_dump())
@@ -280,6 +280,40 @@ async def delete_owner():
     await owner.delete()
 
 
+@router.get('/prompts', response_model=List[PromptResponse])
+@transaction(1)
+async def get_prompts() -> List[PromptResponse]:
+    return [
+        PromptResponse(**prompt.model_dump())
+        for prompt in await Prompt.get_all()
+    ]
+
+
+@router.get('/prompts/{prompt_id}', response_model=PromptResponse)
+@transaction(1)
+async def get_prompt(prompt_id: str) -> PromptResponse:
+    prompt = await Prompt.get_by_id(prompt_id)
+    if not prompt:
+        raise HTTPException(404, 'Prompt not found!')
+
+    return PromptResponse(**prompt.model_dump())
+
+
+@router.post('/prompts', response_model=PromptResponse)
+@transaction(1)
+async def update_prompt(request: PromptRequest) -> PromptResponse:
+    prompt = await Prompt.get_by_id(request.id)
+    if not prompt:
+        prompt = Prompt(**request.model_dump())
+        prompt.add()
+    else:
+        prompt.sqlmodel_update(request.model_dump())
+        prompt.add()
+
+    await session_context.get().commit()
+    return PromptResponse(**prompt.model_dump())
+
+
 @router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)
 @transaction(1)
 async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
@@ -294,7 +328,7 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
 
 @router.post('/images/upload')
 @transaction(1)
-async def upload_image_file(request: Request, file: UploadFile = File(...)):
+async def upload_image_file(request: Request, file: UploadFile = File(...)) -> UploadImageResponse:
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail='Only image files are allowed!')
 

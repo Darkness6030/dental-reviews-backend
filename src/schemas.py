@@ -116,6 +116,18 @@ class OwnerResponse(BaseModel):
     avatar_url: Optional[str]
 
 
+class PromptRequest(BaseModel):
+    id: str
+    prompt_text: str
+    temperature: float
+
+
+class PromptResponse(BaseModel):
+    id: str
+    prompt_text: str
+    temperature: float
+
+
 class ReviewDoctorsRequest(BaseModel):
     doctor_ids: List[int]
 

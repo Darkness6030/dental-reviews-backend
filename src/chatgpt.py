@@ -4,7 +4,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 from rewire import config
 
-from src.models import Aspect, Doctor, Service, Source
+from src.models import Aspect, Doctor, Prompt, Service, Source
 
 
 @config
@@ -12,6 +12,7 @@ class Config(BaseModel):
     api_key: str
     base_url: str
     project: str
+    temperature: float = 0.8
 
 
 CLIENT = AsyncOpenAI(
@@ -20,85 +21,73 @@ CLIENT = AsyncOpenAI(
     project=Config.project
 )
 
-LLM_MODEL = f'gpt://{Config.project}/yandexgpt/latest'
-LLM_TEMPERATURE = 0.8
-
-REVIEW_SYSTEM_PROMPT = '''
-Ты — реальный пациент, который пишет отзыв о посещении медицинской клиники на публичной платформе (например, Яндекс Карты или ПроДокторов).
-
-Задача:
-Напиши искренний, живой и правдоподобный текст отзыва от первого лица.
-
-Требования к стилю:
-- Разговорный, человеческий язык
-- Без канцелярита, рекламных слоганов и шаблонных фраз
-- Допустимы эмоции, личные впечатления, эмодзи
-- Текст должен выглядеть как написанный обычным человеком, а не маркетологом
-
-Структура отзыва:
-1. Короткое вступление с общим впечатлением
-2. Описание визита и взаимодействия с врачами и персоналом
-3. Подробности по услугам и тому, что особенно понравилось
-4. Итоговое впечатление и готовность рекомендовать клинику
-
-Ограничения:
-- Не используй слово «клиника» чаще 2 раз
-- Не перечисляй аспекты списком — вписывай их в текст естественно
-- Не упоминай, что текст был сгенерирован
-- Объём: 1–3 абзаца
-
-Напиши только текст отзыва, без заголовков и пояснений.
-'''
-
-REVIEW_USER_PROMPT = '''
+REVIEWS_USER_PROMPT = '''
 Контекст визита:
-- Врачи, у которых был приём: {doctors}
-- Полученные услуги: {services}
-- Что особенно понравилось во время визита: {aspects}
-- Откуда узнал(а) о клинике: {source}
+{doctors_text}
+- Что особенно понравилось во время визита: {aspects_text}
+- Откуда узнал(а) о клинике: {source_text}
 '''
 
 
-def format_doctors(doctors: List[Doctor]) -> str:
-    return ', '.join(
-        f'{doctor.role} {doctor.name}' if doctor.role else doctor.name
-        for doctor in doctors
+def format_doctors_text(doctors: List[Doctor], services: List[Service]) -> str:
+    if not doctors:
+        return '- Врачи, у которых был приём: не указаны'
+
+    service_ids = {
+        service.id
+        for service in services
+    }
+
+    doctor_lines = ['- Врачи, у которых был приём:']
+    for doctor in doctors:
+        doctor_title = f'{doctor.role} {doctor.name}'
+        doctor_services = [
+            service.name for service in doctor.services
+            if service.id in service_ids
+        ]
+
+        services_text = ', '.join(doctor_services) if doctor_services else 'не указаны'
+        doctor_lines.append(f'{doctor_title}:\nУслуги: {services_text}')
+
+    return '\n'.join(doctor_lines)
+
+
+def build_review_user_prompt(
+    doctors: List[Doctor],
+    services: List[Service],
+    aspects: List[Aspect],
+    source: Optional[Source]
+) -> str:
+    aspects_text = ', '.join(aspect.name for aspect in aspects) if aspects else 'не указано'
+    source_text = source.name if source else 'не указано'
+
+    return REVIEWS_USER_PROMPT.format(
+        doctors_block=format_doctors_text(doctors, services),
+        aspects_text=aspects_text,
+        source_text=source_text
     )
-
-
-def format_services(services: List[Service]) -> str:
-    return ', '.join(service.name for service in services)
-
-
-def format_aspects(aspects: List[Aspect]) -> str:
-    return ', '.join(aspect.name for aspect in aspects)
 
 
 async def generate_review_text(
-        doctors: List[Doctor],
-        services: List[Service],
-        aspects: List[Aspect],
-        source: Optional[Source]
+    reviews_prompt: Prompt,
+    doctors: List[Doctor],
+    services: List[Service],
+    aspects: List[Aspect],
+    source: Optional[Source]
 ) -> str:
-    user_prompt = REVIEW_USER_PROMPT.format(
-        doctors=format_doctors(doctors) if doctors else 'не указаны',
-        services=format_services(services) if services else 'не указаны',
-        aspects=format_aspects(aspects) if aspects else 'не указано',
-        source=source.name if source else 'не указано'
+    user_prompt = build_review_user_prompt(
+        doctors=doctors,
+        services=services,
+        aspects=aspects,
+        source=source
     )
 
     response = await CLIENT.chat.completions.create(
-        model=LLM_MODEL,
-        temperature=LLM_TEMPERATURE,
+        model=f'gpt://{Config.project}/yandexgpt/latest',
+        temperature=reviews_prompt.temperature,
         messages=[
-            {
-                'role': 'system',
-                'content': REVIEW_SYSTEM_PROMPT
-            },
-            {
-                'role': 'user',
-                'content': user_prompt
-            }
+            {'role': 'system', 'content': reviews_prompt.prompt_text},
+            {'role': 'user', 'content': user_prompt}
         ]
     )
 
