@@ -43,11 +43,13 @@ class DoctorResponse(BaseModel):
 
 class ServiceRequest(BaseModel):
     name: str
+    category: str
 
 
 class ServiceResponse(BaseModel):
     id: int
     name: str
+    category: str
 
 
 class AspectRequest(BaseModel):

@@ -33,43 +33,43 @@ class User(SQLModel, table=True):
 
 
 class DoctorServiceLink(SQLModel, table=True):
-    doctor_id: int = Field(foreign_key='doctor.id', primary_key=True)
-    service_id: int = Field(foreign_key='service.id', primary_key=True)
+    doctor_id: int = Field(foreign_key='doctor.id', primary_key=True, ondelete='CASCADE')
+    service_id: int = Field(foreign_key='service.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewDoctorLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    doctor_id: int = Field(foreign_key='doctor.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    doctor_id: int = Field(foreign_key='doctor.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewServiceLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    service_id: int = Field(foreign_key='service.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    service_id: int = Field(foreign_key='service.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewAspectLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    aspect_id: int = Field(foreign_key='aspect.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    aspect_id: int = Field(foreign_key='aspect.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewSourceLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    source_id: int = Field(foreign_key='source.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    source_id: int = Field(foreign_key='source.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewRewardLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    reward_id: int = Field(foreign_key='reward.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    reward_id: int = Field(foreign_key='reward.id', primary_key=True, ondelete='CASCADE')
 
 
 class ReviewPlatformLink(SQLModel, table=True):
-    review_id: int = Field(foreign_key='review.id', primary_key=True)
-    platform_id: int = Field(foreign_key='platform.id', primary_key=True)
+    review_id: int = Field(foreign_key='review.id', primary_key=True, ondelete='CASCADE')
+    platform_id: int = Field(foreign_key='platform.id', primary_key=True, ondelete='CASCADE')
 
 
 class ComplaintReasonLink(SQLModel, table=True):
-    complaint_id: int = Field(foreign_key='complaint.id', primary_key=True)
-    reason_id: int = Field(foreign_key='reason.id', primary_key=True)
+    complaint_id: int = Field(foreign_key='complaint.id', primary_key=True, ondelete='CASCADE')
+    reason_id: int = Field(foreign_key='reason.id', primary_key=True, ondelete='CASCADE')
 
 
 class Doctor(SQLModel, table=True):
@@ -99,6 +99,7 @@ class Doctor(SQLModel, table=True):
 class Service(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    category: str
 
     @classmethod
     async def get_by_id(cls, service_id: int) -> Optional['Service']:
