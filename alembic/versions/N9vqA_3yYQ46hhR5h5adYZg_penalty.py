@@ -1,15 +1,14 @@
 from alembic import op
-from sqlalchemy.sql.elements import quoted_name
-from sqlalchemy.sql.schema import Table
-from sqlalchemy.sql.schema import MetaData
 from sqlalchemy.sql.schema import Column
-from sqlalchemy.sql.sqltypes import Integer
-from sqlmodel.sql.sqltypes import AutoString
+from sqlalchemy.sql.schema import ForeignKeyConstraint
+from sqlalchemy.sql.schema import MetaData
 from sqlalchemy.sql.schema import PrimaryKeyConstraint
+from sqlalchemy.sql.schema import Table
+from sqlalchemy.sql.sqltypes import Boolean
 from sqlalchemy.sql.sqltypes import DateTime
 from sqlalchemy.sql.sqltypes import Float
-from sqlalchemy.sql.sqltypes import Boolean
-from sqlalchemy.sql.schema import ForeignKeyConstraint
+from sqlalchemy.sql.sqltypes import Integer
+from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
 revision = 'N9vqA_3yYQ46hhR5h5adYZg'
@@ -26,6 +25,7 @@ def upgrade() -> None:
                 'frequency_penalty',
                 Float(),
                 nullable=False,
+                server_default='1.0'
             ),
         )
     # ### end Alembic commands ###
