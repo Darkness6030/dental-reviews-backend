@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime
+from io import BytesIO
 from typing import List, Optional
 
 import aiofiles
@@ -8,11 +9,13 @@ from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
+from starlette.responses import StreamingResponse
 
 from src import chatgpt
 from src.auth import admin_required
 from src.models import Aspect, Complaint, Doctor, Owner, Platform, Prompt, Reason, Review, Reward, Service, Source
 from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -336,6 +339,57 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     return ReviewsDashboardResponse(
         reviews=[create_review_response(review) for review in reviews],
         complaints=[create_complaint_response(complaint) for complaint in complaints]
+    )
+
+
+@router.get('/reviews/export')
+@transaction(1)
+async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
+    rows_data = []
+    for review in await Review.get_all(date_after, date_before):
+        doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors)
+        services_text = ', '.join(service.name for service in review.selected_services)
+        platforms_text = ', '.join(platform.name for platform in review.published_platforms)
+        rows_data.append({
+            'Пациент': review.contact_name,
+            'Телефон': review.contact_phone,
+            'Врач': doctors_text,
+            'Услуга': services_text,
+            'Подарок': review.selected_reward.name if review.selected_reward else None,
+            'Платформы': platforms_text,
+            'Текст отзыва': review.review_text
+        })
+
+    excel_bytes = export_rows_to_excel(rows_data)
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={
+            'Content-Disposition': 'attachment; filename=reviews.xlsx'
+        }
+    )
+
+
+@router.get('/complaints/export')
+@transaction(1)
+async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
+    rows_data = []
+    for complaint in await Complaint.get_all(date_after, date_before):
+        reasons_text = ', '.join(reason.name for reason in complaint.selected_reasons)
+        rows_data.append({
+            'Пациент': complaint.contact_name,
+            'Телефон': complaint.contact_phone,
+            'Причины': reasons_text,
+            'Текст жалобы': complaint.complaint_text
+        })
+
+    excel_bytes = export_rows_to_excel(rows_data)
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={
+            'Content-Disposition': 'attachment; filename=complaints.xlsx'
+        }
     )
 
 
