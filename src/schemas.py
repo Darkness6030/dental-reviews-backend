@@ -29,7 +29,8 @@ class UploadImageResponse(BaseModel):
 class DoctorRequest(BaseModel):
     name: str
     role: str
-    avatar_url: Optional[str] = None
+    avatar_url: Optional[str]
+    is_enabled: bool
     service_ids: List[int]
 
 
@@ -38,53 +39,63 @@ class DoctorResponse(BaseModel):
     name: str
     role: str
     avatar_url: Optional[str]
+    is_enabled: bool
     services: List['ServiceResponse']
 
 
 class ServiceRequest(BaseModel):
     name: str
     category: str
+    is_enabled: bool
 
 
 class ServiceResponse(BaseModel):
     id: int
     name: str
     category: str
+    is_enabled: bool
 
 
 class AspectRequest(BaseModel):
     name: str
+    is_enabled: bool
 
 
 class AspectResponse(BaseModel):
     id: int
     name: str
+    is_enabled: bool
 
 
 class SourceRequest(BaseModel):
     name: str
+    is_enabled: bool
 
 
 class SourceResponse(BaseModel):
     id: int
     name: str
+    is_enabled: bool
 
 
 class RewardRequest(BaseModel):
     name: str
-    image_url: Optional[str] = None
+    image_url: Optional[str]
+    is_enabled: bool
 
 
 class RewardResponse(BaseModel):
     id: int
     name: str
     image_url: Optional[str]
+    is_enabled: bool
 
 
 class PlatformRequest(BaseModel):
     name: str
     url: str
-    image_url: Optional[str] = None
+    image_url: Optional[str]
+    is_enabled: bool
 
 
 class PlatformResponse(BaseModel):
@@ -92,15 +103,18 @@ class PlatformResponse(BaseModel):
     name: str
     url: str
     image_url: Optional[str]
+    is_enabled: bool
 
 
 class ReasonRequest(BaseModel):
     name: str
+    is_enabled: bool
 
 
 class ReasonResponse(BaseModel):
     id: int
     name: str
+    is_enabled: bool
 
 
 class OwnerRequest(BaseModel):
@@ -151,8 +165,8 @@ class ReviewSourceRequest(BaseModel):
 
 
 class ReviewContactsRequest(BaseModel):
-    contact_name: Optional[str] = None
-    contact_phone: Optional[str] = None
+    contact_name: Optional[str]
+    contact_phone: Optional[str]
 
 
 class ReviewTextRequest(BaseModel):

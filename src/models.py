@@ -77,6 +77,7 @@ class Doctor(SQLModel, table=True):
     name: str
     role: str
     avatar_url: Optional[str] = None
+    is_enabled: bool = True
 
     services: List['Service'] = Relationship(
         link_model=DoctorServiceLink,
@@ -93,13 +94,14 @@ class Doctor(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Doctor']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Service(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
     category: str
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, service_id: int) -> Optional['Service']:
@@ -122,12 +124,13 @@ class Service(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Service']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Aspect(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, aspect_id: int) -> Optional['Aspect']:
@@ -139,12 +142,13 @@ class Aspect(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Aspect']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Source(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, source_id: int) -> Optional['Source']:
@@ -156,13 +160,14 @@ class Source(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Source']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Reward(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
     image_url: Optional[str] = None
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, reward_id: int) -> Optional['Reward']:
@@ -174,7 +179,7 @@ class Reward(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Reward']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Platform(SQLModel, table=True):
@@ -182,6 +187,7 @@ class Platform(SQLModel, table=True):
     name: str
     url: str
     image_url: Optional[str] = None
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, platform_id: int) -> Optional['Platform']:
@@ -193,12 +199,13 @@ class Platform(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Platform']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Reason(SQLModel, table=True):
     id: int = Field(primary_key=True)
     name: str
+    is_enabled: bool = True
 
     @classmethod
     async def get_by_id(cls, reason_id: int) -> Optional['Reason']:
@@ -210,7 +217,7 @@ class Reason(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Reason']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Owner(SQLModel, table=True):
@@ -238,7 +245,7 @@ class Prompt(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List['Prompt']:
-        return list(await cls.select().all())
+        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Review(SQLModel, table=True):
@@ -294,7 +301,7 @@ class Review(SQLModel, table=True):
             date_before = datetime.combine(date_before, time.max)
             query = query.where(cls.created_at <= date_before)
 
-        return list(await query.all())
+        return list(await query.order_by(cls.created_at).all())
 
 
 class Complaint(SQLModel, table=True):
@@ -325,4 +332,4 @@ class Complaint(SQLModel, table=True):
             date_before = datetime.combine(date_before, time.max)
             query = query.where(cls.created_at <= date_before)
 
-        return list(await query.all())
+        return list(await query.order_by(cls.created_at).all())
