@@ -21,6 +21,10 @@ class LoginResponse(BaseModel):
     access_token: str
 
 
+class ReorderRequest(BaseModel):
+    ordered_ids: List[int]
+
+
 class UploadImageResponse(BaseModel):
     filename: str
     image_url: str

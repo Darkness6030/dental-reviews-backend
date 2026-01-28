@@ -14,7 +14,7 @@ from starlette.responses import StreamingResponse
 from src import chatgpt
 from src.auth import admin_required
 from src.models import Aspect, Complaint, Doctor, Owner, Platform, Prompt, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
@@ -61,6 +61,12 @@ async def delete_doctor(doctor_id: int):
     await doctor.delete()
 
 
+@router.patch('/doctors/reorder', status_code=204)
+@transaction(1)
+async def reorder_doctors(request: ReorderRequest):
+    await Doctor.reorder(request.ordered_ids)
+
+
 @router.post('/services', response_model=ServiceResponse)
 @transaction(1)
 async def create_service(request: ServiceRequest) -> ServiceResponse:
@@ -92,6 +98,12 @@ async def delete_service(service_id: int):
         raise HTTPException(404, 'Service not found!')
 
     await service.delete()
+
+
+@router.patch('/services/reorder', status_code=204)
+@transaction(1)
+async def reorder_services(request: ReorderRequest):
+    await Service.reorder(request.ordered_ids)
 
 
 @router.post('/aspects', response_model=AspectResponse)
@@ -127,6 +139,12 @@ async def delete_aspect(aspect_id: int):
     await aspect.delete()
 
 
+@router.patch('/aspects/reorder', status_code=204)
+@transaction(1)
+async def reorder_aspects(request: ReorderRequest):
+    await Aspect.reorder(request.ordered_ids)
+
+
 @router.post('/sources', response_model=SourceResponse)
 @transaction(1)
 async def create_source(request: SourceRequest) -> SourceResponse:
@@ -158,6 +176,12 @@ async def delete_source(source_id: int):
         raise HTTPException(404, 'Source not found!')
 
     await source.delete()
+
+
+@router.patch('/sources/reorder', status_code=204)
+@transaction(1)
+async def reorder_sources(request: ReorderRequest):
+    await Source.reorder(request.ordered_ids)
 
 
 @router.post('/rewards', response_model=RewardResponse)
@@ -193,6 +217,12 @@ async def delete_reward(reward_id: int):
     await reward.delete()
 
 
+@router.patch('/rewards/reorder', status_code=204)
+@transaction(1)
+async def reorder_rewards(request: ReorderRequest):
+    await Reward.reorder(request.ordered_ids)
+
+
 @router.post('/platforms', response_model=PlatformResponse)
 @transaction(1)
 async def create_platform(request: PlatformRequest) -> PlatformResponse:
@@ -226,6 +256,12 @@ async def delete_platform(platform_id: int):
     await platform.delete()
 
 
+@router.patch('/platforms/reorder', status_code=204)
+@transaction(1)
+async def reorder_platforms(request: ReorderRequest):
+    await Platform.reorder(request.ordered_ids)
+
+
 @router.post('/reasons', response_model=ReasonResponse)
 @transaction(1)
 async def create_reason(request: ReasonRequest) -> ReasonResponse:
@@ -257,6 +293,12 @@ async def delete_reason(reason_id: int):
         raise HTTPException(404, 'Reason not found!')
 
     await reason.delete()
+
+
+@router.patch('/platforms/reorder', status_code=204)
+@transaction(1)
+async def reorder_platforms(request: ReorderRequest):
+    await Platform.reorder(request.ordered_ids)
 
 
 @router.post('/owner', response_model=OwnerResponse)
@@ -363,10 +405,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
     excel_bytes = export_rows_to_excel(rows_data)
     return StreamingResponse(
         BytesIO(excel_bytes),
-        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={
-            'Content-Disposition': 'attachment; filename=reviews.xlsx'
-        }
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
 
@@ -386,10 +425,7 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
     excel_bytes = export_rows_to_excel(rows_data)
     return StreamingResponse(
         BytesIO(excel_bytes),
-        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        headers={
-            'Content-Disposition': 'attachment; filename=complaints.xlsx'
-        }
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
 

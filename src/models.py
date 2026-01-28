@@ -2,8 +2,9 @@ from datetime import datetime, time
 from typing import List, Optional
 
 import bcrypt
-from rewire_sqlmodel import SQLModel
-from sqlmodel import Field, Relationship
+from rewire_sqlmodel import SQLModel, session_context
+from sqlalchemy import update
+from sqlmodel import Field, Relationship, case
 
 
 class User(SQLModel, table=True):
@@ -72,44 +73,51 @@ class ComplaintReasonLink(SQLModel, table=True):
     reason_id: int = Field(foreign_key='reason.id', primary_key=True, ondelete='CASCADE')
 
 
-class Doctor(SQLModel, table=True):
+class ItemModel(SQLModel, table=False):
     id: int = Field(primary_key=True)
+    position: int = Field(default=0, index=True)
+    is_enabled: bool = False
+
+    @classmethod
+    async def get_by_id(cls, item_id: int) -> Optional['ItemModel']:
+        return await cls.select().filter_by(id=item_id).first()
+
+    @classmethod
+    async def get_by_ids(cls, item_ids: List[int]) -> List['ItemModel']:
+        return list(await cls.select().where(cls.id.in_(item_ids)).all())
+
+    @classmethod
+    async def get_all(cls) -> List['ItemModel']:
+        return list(await cls.select().order_by(cls.position).all())
+
+    @classmethod
+    async def reorder(cls, ordered_ids: List[int]):
+        position_case = case(
+            {item_id: index for index, item_id in enumerate(ordered_ids)},
+            value=cls.id
+        )
+
+        await session_context.get().exec(
+            update(cls)
+            .where(cls.id.in_(ordered_ids))
+            .values(position=position_case)
+        )
+
+
+class Doctor(ItemModel, table=True):
     name: str
     role: str
     avatar_url: Optional[str] = None
-    is_enabled: bool = True
 
     services: List['Service'] = Relationship(
         link_model=DoctorServiceLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
-    @classmethod
-    async def get_by_id(cls, doctor_id: int) -> Optional['Doctor']:
-        return await cls.select().filter_by(id=doctor_id).first()
 
-    @classmethod
-    async def get_by_ids(cls, doctor_ids: List[int]) -> List['Doctor']:
-        return list(await cls.select().where(cls.id.in_(doctor_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Doctor']:
-        return list(await cls.select().order_by(cls.created_at).all())
-
-
-class Service(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Service(ItemModel, table=True):
     name: str
     category: str
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, service_id: int) -> Optional['Service']:
-        return await cls.select().filter_by(id=service_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, service_ids: List[int]) -> List['Service']:
-        return list(await cls.select().where(cls.id.in_(service_ids)).all())
 
     @classmethod
     async def get_by_doctor_ids(cls, doctor_ids: List[int]) -> List['Service']:
@@ -120,104 +128,30 @@ class Service(SQLModel, table=True):
             .distinct()
         )
 
-        return list(await query.all())
-
-    @classmethod
-    async def get_all(cls) -> List['Service']:
-        return list(await cls.select().order_by(cls.created_at).all())
+        return list(await query.order_by(cls.position).all())
 
 
-class Aspect(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Aspect(ItemModel, table=True):
     name: str
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, aspect_id: int) -> Optional['Aspect']:
-        return await cls.select().filter_by(id=aspect_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, aspect_ids: List[int]) -> List['Aspect']:
-        return list(await cls.select().where(cls.id.in_(aspect_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Aspect']:
-        return list(await cls.select().order_by(cls.created_at).all())
 
 
-class Source(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Source(ItemModel, table=True):
     name: str
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, source_id: int) -> Optional['Source']:
-        return await cls.select().filter_by(id=source_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, source_ids: List[int]) -> List['Source']:
-        return list(await cls.select().where(cls.id.in_(source_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Source']:
-        return list(await cls.select().order_by(cls.created_at).all())
 
 
-class Reward(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Reward(ItemModel, table=True):
     name: str
     image_url: Optional[str] = None
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, reward_id: int) -> Optional['Reward']:
-        return await cls.select().filter_by(id=reward_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, reward_ids: List[int]) -> List['Reward']:
-        return list(await cls.select().where(cls.id.in_(reward_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Reward']:
-        return list(await cls.select().order_by(cls.created_at).all())
 
 
-class Platform(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Platform(ItemModel, table=True):
     name: str
     url: str
     image_url: Optional[str] = None
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, platform_id: int) -> Optional['Platform']:
-        return await cls.select().filter_by(id=platform_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, platform_ids: List[int]) -> List['Platform']:
-        return list(await cls.select().where(cls.id.in_(platform_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Platform']:
-        return list(await cls.select().order_by(cls.created_at).all())
 
 
-class Reason(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+class Reason(ItemModel, table=True):
     name: str
-    is_enabled: bool = True
-
-    @classmethod
-    async def get_by_id(cls, reason_id: int) -> Optional['Reason']:
-        return await cls.select().filter_by(id=reason_id).first()
-
-    @classmethod
-    async def get_by_ids(cls, reason_ids: List[int]) -> List['Reason']:
-        return list(await cls.select().where(cls.id.in_(reason_ids)).all())
-
-    @classmethod
-    async def get_all(cls) -> List['Reason']:
-        return list(await cls.select().order_by(cls.created_at).all())
 
 
 class Owner(SQLModel, table=True):
