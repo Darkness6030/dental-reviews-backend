@@ -295,10 +295,10 @@ async def delete_reason(reason_id: int):
     await reason.delete()
 
 
-@router.patch('/platforms/reorder', status_code=204)
+@router.patch('/reasons/reorder', status_code=204)
 @transaction(1)
-async def reorder_platforms(request: ReorderRequest):
-    await Platform.reorder(request.ordered_ids)
+async def reorder_reasons(request: ReorderRequest):
+    await Reason.reorder(request.ordered_ids)
 
 
 @router.post('/owner', response_model=OwnerResponse)
