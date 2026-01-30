@@ -5,10 +5,29 @@ from pydantic import BaseModel
 from src.models import Complaint, Doctor, Review
 
 
-class UserResponse(BaseModel):
+class UserRequest(BaseModel):
+    name: str
+    username: str
+    password: str
+    is_admin: bool
+    avatar_url: Optional[str]
+
+
+class UpdateUserRequest(BaseModel):
     name: str
     username: str
     is_admin: bool
+    password: Optional[str]
+    avatar_url: Optional[str]
+
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    username: str
+    is_admin: bool
+    is_owner: bool
+    avatar_url: Optional[str]
 
 
 class LoginRequest(BaseModel):
@@ -119,19 +138,6 @@ class ReasonResponse(BaseModel):
     id: int
     name: str
     is_enabled: bool
-
-
-class OwnerRequest(BaseModel):
-    name: str
-    title: str
-    avatar_url: Optional[str]
-
-
-class OwnerResponse(BaseModel):
-    id: int
-    name: str
-    title: str
-    avatar_url: Optional[str]
 
 
 class PromptRequest(BaseModel):

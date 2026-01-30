@@ -58,7 +58,7 @@ def format_doctors_text(doctors: List[Doctor], services: List[Service]) -> str:
     return '\n'.join(doctor_lines)
 
 
-def build_review_user_prompt(
+def format_review_user_prompt(
     doctors: List[Doctor],
     services: List[Service],
     aspects: List[Aspect],
@@ -83,7 +83,7 @@ async def generate_review_text(
     aspects: List[Aspect],
     source: Optional[Source]
 ) -> str:
-    user_prompt = build_review_user_prompt(
+    user_prompt = format_review_user_prompt(
         doctors=doctors,
         services=services,
         aspects=aspects,

@@ -40,3 +40,11 @@ async def admin_required(credentials: HTTPAuthorizationCredentials = Depends(HTT
         raise HTTPException(403, 'Admin privileges required!')
 
     return user
+
+
+async def owner_required(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer())) -> User:
+    user = await user_required(credentials)
+    if not user.is_owner:
+        raise HTTPException(403, 'Owner privileges required!')
+
+    return user

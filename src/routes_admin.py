@@ -13,8 +13,8 @@ from starlette.responses import StreamingResponse
 
 from src import chatgpt
 from src.auth import admin_required
-from src.models import Aspect, Complaint, Doctor, Owner, Platform, Prompt, Reason, Review, Reward, Service, Source
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, OwnerRequest, OwnerResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source, User
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UpdateUserRequest, UploadImageResponse, UserRequest, UserResponse, create_complaint_response, create_doctor_response, create_review_response
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
@@ -23,6 +23,43 @@ router = APIRouter(
     tags=['Admin'],
     dependencies=[Depends(admin_required)]
 )
+
+
+@router.post('/users', response_model=UserResponse)
+@transaction(1)
+async def create_user(request: UserRequest) -> UserResponse:
+    user = User(**request.model_dump())
+    user.set_password(request.password)
+    user.add()
+
+    await session_context.get().commit()
+    return UserResponse(**user.model_dump())
+
+
+@router.post('/users/{user_id}')
+@transaction(1)
+async def update_user(user_id: int, request: UpdateUserRequest) -> UserResponse:
+    user = await User.get_by_id(user_id)
+    if not user:
+        raise HTTPException(404, 'User not found!')
+
+    if request.password:
+        user.set_password(request.password)
+
+    user.sqlmodel_update(request.model_dump())
+    user.add()
+
+    return UserResponse(**user.model_dump())
+
+
+@router.delete('/users/{user_id}', status_code=204)
+@transaction(1)
+async def delete_user(user_id: int):
+    user = await User.get_by_id(user_id)
+    if not user:
+        raise HTTPException(404, 'User not found!')
+
+    await user.delete()
 
 
 @router.post('/doctors', response_model=DoctorResponse)
@@ -299,31 +336,6 @@ async def delete_reason(reason_id: int):
 @transaction(1)
 async def reorder_reasons(request: ReorderRequest):
     await Reason.reorder(request.ordered_ids)
-
-
-@router.post('/owner', response_model=OwnerResponse)
-@transaction(1)
-async def update_owner(request: OwnerRequest) -> OwnerResponse:
-    owner = await Owner.get()
-    if not owner:
-        owner = Owner(**request.model_dump())
-        owner.add()
-    else:
-        owner.sqlmodel_update(request.model_dump())
-        owner.add()
-
-    await session_context.get().commit()
-    return OwnerResponse(**owner.model_dump())
-
-
-@router.delete('/owner', status_code=204)
-@transaction(1)
-async def delete_owner():
-    owner = await Owner.get()
-    if not owner:
-        raise HTTPException(404, 'Owner not found!')
-
-    await owner.delete()
 
 
 @router.get('/prompts', response_model=List[PromptResponse])

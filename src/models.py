@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from typing import List, Optional
+from typing import List, Optional, Self
 
 import bcrypt
 from rewire_sqlmodel import SQLModel, session_context
@@ -13,24 +13,27 @@ class User(SQLModel, table=True):
     username: str
     password_hash: str
     is_admin: bool = False
+    is_owner: bool = False
+    avatar_url: Optional[str] = None
     telegram_id: Optional[int] = None
 
-    def __init__(self, username: str, password: str):
-        super().__init__(
-            username=username,
-            password_hash=bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        )
+    def set_password(self, password: str):
+        self.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode(), self.password_hash.encode())
 
     @classmethod
-    async def get_by_id(cls, user_id: int) -> Optional['User']:
+    async def get_by_id(cls, user_id: int) -> Optional[Self]:
         return await cls.select().filter_by(id=user_id).first()
 
     @classmethod
-    async def get_by_username(cls, username: str) -> Optional['User']:
+    async def get_by_username(cls, username: str) -> Optional[Self]:
         return await cls.select().filter_by(username=username).first()
+
+    @classmethod
+    async def get_owner(cls) -> Optional[Self]:
+        return await cls.select().filter_by(is_owner=True).first()
 
 
 class DoctorServiceLink(SQLModel, table=True):
@@ -79,15 +82,15 @@ class ItemModel(SQLModel, table=False):
     is_enabled: bool = False
 
     @classmethod
-    async def get_by_id(cls, item_id: int) -> Optional['ItemModel']:
+    async def get_by_id(cls, item_id: int) -> Optional[Self]:
         return await cls.select().filter_by(id=item_id).first()
 
     @classmethod
-    async def get_by_ids(cls, item_ids: List[int]) -> List['ItemModel']:
+    async def get_by_ids(cls, item_ids: List[int]) -> List[Self]:
         return list(await cls.select().where(cls.id.in_(item_ids)).all())
 
     @classmethod
-    async def get_all(cls) -> List['ItemModel']:
+    async def get_all(cls) -> List[Self]:
         return list(await cls.select().order_by(cls.position).all())
 
     @classmethod
@@ -120,7 +123,7 @@ class Service(ItemModel, table=True):
     category: str
 
     @classmethod
-    async def get_by_doctor_ids(cls, doctor_ids: List[int]) -> List['Service']:
+    async def get_by_doctor_ids(cls, doctor_ids: List[int]) -> List[Self]:
         query = (
             cls.select()
             .join(DoctorServiceLink, DoctorServiceLink.service_id == cls.id)  # type: ignore
@@ -154,17 +157,6 @@ class Reason(ItemModel, table=True):
     name: str
 
 
-class Owner(SQLModel, table=True):
-    id: int = Field(primary_key=True)
-    name: str
-    title: str
-    avatar_url: Optional[str] = None
-
-    @classmethod
-    async def get(cls) -> Optional['Owner']:
-        return await cls.select().first()
-
-
 class Prompt(SQLModel, table=True):
     id: str = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
@@ -174,11 +166,11 @@ class Prompt(SQLModel, table=True):
     frequency_penalty: float
 
     @classmethod
-    async def get_by_id(cls, prompt_id: str) -> Optional['Prompt']:
+    async def get_by_id(cls, prompt_id: str) -> Optional[Self]:
         return await cls.select().filter_by(id=prompt_id).first()
 
     @classmethod
-    async def get_all(cls) -> List['Prompt']:
+    async def get_all(cls) -> List[Self]:
         return list(await cls.select().order_by(cls.created_at).all())
 
 
@@ -221,11 +213,11 @@ class Review(SQLModel, table=True):
     )
 
     @classmethod
-    async def get_by_id(cls, review_id: int) -> Optional['Review']:
+    async def get_by_id(cls, review_id: int) -> Optional[Self]:
         return await cls.select().filter_by(id=review_id).first()
 
     @classmethod
-    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Review']:
+    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List[Self]:
         query = cls.select()
         if date_after:
             date_after = datetime.combine(date_after, time.min)
@@ -252,11 +244,11 @@ class Complaint(SQLModel, table=True):
     )
 
     @classmethod
-    async def get_by_id(cls, complaint_id: int) -> Optional['Complaint']:
+    async def get_by_id(cls, complaint_id: int) -> Optional[Self]:
         return await cls.select().filter_by(id=complaint_id).first()
 
     @classmethod
-    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List['Complaint']:
+    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List[Self]:
         query = cls.select()
         if date_after:
             date_after = datetime.combine(date_after, time.min)
