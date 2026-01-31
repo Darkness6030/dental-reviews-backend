@@ -4,7 +4,7 @@ from typing import List, Optional, Self
 import bcrypt
 from rewire_sqlmodel import SQLModel, session_context
 from sqlalchemy import update
-from sqlmodel import Field, Relationship, case
+from sqlmodel import Field, Relationship, case, desc
 
 
 class User(SQLModel, table=True):
@@ -37,7 +37,7 @@ class User(SQLModel, table=True):
 
     @classmethod
     async def get_all(cls) -> List[Self]:
-        return list(await cls.select().order_by(cls.id).all())
+        return list(await cls.select().order_by(desc(cls.is_owner)).all())
 
 
 class DoctorServiceLink(SQLModel, table=True):
