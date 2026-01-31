@@ -1,15 +1,18 @@
 import os
-from typing import List
+from datetime import datetime
+from io import BytesIO
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from rewire import simple_plugin
 from rewire_sqlmodel import transaction
-from starlette.responses import FileResponse
+from starlette.responses import FileResponse, StreamingResponse
 
 from src import auth
 from src.auth import user_required
-from src.models import Aspect, Doctor, Platform, Reason, Reward, Service, Source, User
-from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse, create_doctor_response
+from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
+from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
@@ -114,6 +117,63 @@ async def get_owner() -> UserResponse:
         raise HTTPException(404, 'Owner not found!')
 
     return UserResponse(**owner.model_dump())
+
+
+@router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)
+@transaction(1)
+async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
+    reviews = await Review.get_all(date_after, date_before)
+    complaints = await Complaint.get_all(date_after, date_before)
+
+    return ReviewsDashboardResponse(
+        reviews=[create_review_response(review) for review in reviews],
+        complaints=[create_complaint_response(complaint) for complaint in complaints]
+    )
+
+
+@router.get('/reviews/export', response_class=StreamingResponse)
+@transaction(1)
+async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
+    rows_data = []
+    for review in await Review.get_all(date_after, date_before):
+        doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors)
+        services_text = ', '.join(service.name for service in review.selected_services)
+        platforms_text = ', '.join(platform.name for platform in review.published_platforms)
+        rows_data.append({
+            'Пациент': review.contact_name,
+            'Телефон': review.contact_phone,
+            'Врач': doctors_text,
+            'Услуга': services_text,
+            'Подарок': review.selected_reward.name if review.selected_reward else None,
+            'Платформы': platforms_text,
+            'Текст отзыва': review.review_text
+        })
+
+    excel_bytes = export_rows_to_excel(rows_data)
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+
+
+@router.get('/complaints/export', response_class=StreamingResponse)
+@transaction(1)
+async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
+    rows_data = []
+    for complaint in await Complaint.get_all(date_after, date_before):
+        reasons_text = ', '.join(reason.name for reason in complaint.selected_reasons)
+        rows_data.append({
+            'Пациент': complaint.contact_name,
+            'Телефон': complaint.contact_phone,
+            'Причины': reasons_text,
+            'Текст жалобы': complaint.complaint_text
+        })
+
+    excel_bytes = export_rows_to_excel(rows_data)
+    return StreamingResponse(
+        BytesIO(excel_bytes),
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 
 @router.get('/images/{image_path}', response_class=FileResponse)

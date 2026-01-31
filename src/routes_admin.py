@@ -1,21 +1,17 @@
 import os
 import uuid
-from datetime import datetime
-from io import BytesIO
-from typing import List, Optional
+from typing import List
 
 import aiofiles
 from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
-from starlette.responses import StreamingResponse
 
 from src import chatgpt
 from src.auth import admin_required, owner_required
-from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, UserRequest, UserResponse, create_complaint_response, create_doctor_response, create_review_response
-from src.utils import export_rows_to_excel
+from src.models import Aspect, Doctor, Platform, Prompt, Reason, Reward, Service, Source, User
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, UserRequest, UserResponse, create_doctor_response
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -25,7 +21,7 @@ router = APIRouter(
 )
 
 
-@router.get('/users', dependencies=Depends(owner_required), response_model=List[UserResponse])
+@router.get('/users', dependencies=[Depends(owner_required)], response_model=List[UserResponse])
 @transaction(1)
 async def get_users() -> List[UserResponse]:
     return [
@@ -34,7 +30,7 @@ async def get_users() -> List[UserResponse]:
     ]
 
 
-@router.post('/users', dependencies=Depends(owner_required), response_model=UserResponse)
+@router.post('/users', dependencies=[Depends(owner_required)], response_model=UserResponse)
 @transaction(1)
 async def create_user(request: UserRequest) -> UserResponse:
     user = User(**request.model_dump())
@@ -45,7 +41,7 @@ async def create_user(request: UserRequest) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.post('/users/{user_id}', dependencies=Depends(owner_required), response_model=UserResponse)
+@router.post('/users/{user_id}', dependencies=[Depends(owner_required)], response_model=UserResponse)
 @transaction(1)
 async def update_user(user_id: int, request: UserRequest) -> UserResponse:
     user = await User.get_by_id(user_id)
@@ -61,7 +57,7 @@ async def update_user(user_id: int, request: UserRequest) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.delete('/users/{user_id}', dependencies=Depends(owner_required), status_code=204)
+@router.delete('/users/{user_id}', dependencies=[Depends(owner_required)], status_code=204)
 @transaction(1)
 async def delete_user(user_id: int):
     user = await User.get_by_id(user_id)
@@ -391,63 +387,6 @@ async def test_prompt(request: PromptRequest) -> PromptTestResponse:
     )
 
     return PromptTestResponse(generated_text=generated_text)
-
-
-@router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)
-@transaction(1)
-async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
-    reviews = await Review.get_all(date_after, date_before)
-    complaints = await Complaint.get_all(date_after, date_before)
-
-    return ReviewsDashboardResponse(
-        reviews=[create_review_response(review) for review in reviews],
-        complaints=[create_complaint_response(complaint) for complaint in complaints]
-    )
-
-
-@router.get('/reviews/export', response_class=StreamingResponse)
-@transaction(1)
-async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
-    rows_data = []
-    for review in await Review.get_all(date_after, date_before):
-        doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors)
-        services_text = ', '.join(service.name for service in review.selected_services)
-        platforms_text = ', '.join(platform.name for platform in review.published_platforms)
-        rows_data.append({
-            'Пациент': review.contact_name,
-            'Телефон': review.contact_phone,
-            'Врач': doctors_text,
-            'Услуга': services_text,
-            'Подарок': review.selected_reward.name if review.selected_reward else None,
-            'Платформы': platforms_text,
-            'Текст отзыва': review.review_text
-        })
-
-    excel_bytes = export_rows_to_excel(rows_data)
-    return StreamingResponse(
-        BytesIO(excel_bytes),
-        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-
-
-@router.get('/complaints/export', response_class=StreamingResponse)
-@transaction(1)
-async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
-    rows_data = []
-    for complaint in await Complaint.get_all(date_after, date_before):
-        reasons_text = ', '.join(reason.name for reason in complaint.selected_reasons)
-        rows_data.append({
-            'Пациент': complaint.contact_name,
-            'Телефон': complaint.contact_phone,
-            'Причины': reasons_text,
-            'Текст жалобы': complaint.complaint_text
-        })
-
-    excel_bytes = export_rows_to_excel(rows_data)
-    return StreamingResponse(
-        BytesIO(excel_bytes),
-        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
 
 
 @router.post('/images/upload', response_model=UploadImageResponse)
