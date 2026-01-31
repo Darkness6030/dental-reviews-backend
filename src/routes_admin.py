@@ -12,9 +12,9 @@ from starlette.requests import Request
 from starlette.responses import StreamingResponse
 
 from src import chatgpt
-from src.auth import admin_required
+from src.auth import admin_required, owner_required
 from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UpdateUserRequest, UploadImageResponse, UserRequest, UserResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, ReviewsDashboardResponse, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, UserRequest, UserResponse, create_complaint_response, create_doctor_response, create_review_response
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
@@ -25,7 +25,16 @@ router = APIRouter(
 )
 
 
-@router.post('/users', response_model=UserResponse)
+@router.get('/users', dependencies=Depends(owner_required), response_model=List[UserResponse])
+@transaction(1)
+async def get_users() -> List[UserResponse]:
+    return [
+        UserResponse(**user.model_dump())
+        for user in await User.get_all()
+    ]
+
+
+@router.post('/users', dependencies=Depends(owner_required), response_model=UserResponse)
 @transaction(1)
 async def create_user(request: UserRequest) -> UserResponse:
     user = User(**request.model_dump())
@@ -36,9 +45,9 @@ async def create_user(request: UserRequest) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.post('/users/{user_id}')
+@router.post('/users/{user_id}', dependencies=Depends(owner_required), response_model=UserResponse)
 @transaction(1)
-async def update_user(user_id: int, request: UpdateUserRequest) -> UserResponse:
+async def update_user(user_id: int, request: UserRequest) -> UserResponse:
     user = await User.get_by_id(user_id)
     if not user:
         raise HTTPException(404, 'User not found!')
@@ -52,7 +61,7 @@ async def update_user(user_id: int, request: UpdateUserRequest) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.delete('/users/{user_id}', status_code=204)
+@router.delete('/users/{user_id}', dependencies=Depends(owner_required), status_code=204)
 @transaction(1)
 async def delete_user(user_id: int):
     user = await User.get_by_id(user_id)
@@ -396,7 +405,7 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     )
 
 
-@router.get('/reviews/export')
+@router.get('/reviews/export', response_class=StreamingResponse)
 @transaction(1)
 async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
     rows_data = []
@@ -421,7 +430,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
     )
 
 
-@router.get('/complaints/export')
+@router.get('/complaints/export', response_class=StreamingResponse)
 @transaction(1)
 async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
     rows_data = []
@@ -441,7 +450,7 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
     )
 
 
-@router.post('/images/upload')
+@router.post('/images/upload', response_model=UploadImageResponse)
 @transaction(1)
 async def upload_image_file(request: Request, file: UploadFile = File(...)) -> UploadImageResponse:
     if not file.content_type.startswith('image/'):

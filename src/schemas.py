@@ -13,14 +13,6 @@ class UserRequest(BaseModel):
     avatar_url: Optional[str]
 
 
-class UpdateUserRequest(BaseModel):
-    name: str
-    username: str
-    is_admin: bool
-    password: Optional[str]
-    avatar_url: Optional[str]
-
-
 class UserResponse(BaseModel):
     id: int
     name: str

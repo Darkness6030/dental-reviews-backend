@@ -35,6 +35,10 @@ class User(SQLModel, table=True):
     async def get_owner(cls) -> Optional[Self]:
         return await cls.select().filter_by(is_owner=True).first()
 
+    @classmethod
+    async def get_all(cls) -> List[Self]:
+        return list(await cls.select().order_by(cls.id).all())
+
 
 class DoctorServiceLink(SQLModel, table=True):
     doctor_id: int = Field(foreign_key='doctor.id', primary_key=True, ondelete='CASCADE')
