@@ -119,7 +119,7 @@ async def get_owner() -> UserResponse:
     return UserResponse(**owner.model_dump())
 
 
-@router.get('/reviews/dashboard', response_model=ReviewsDashboardResponse)
+@router.get('/dashboard', response_model=ReviewsDashboardResponse)
 @transaction(1)
 async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
     reviews = await Review.get_all(date_after, date_before)
@@ -131,7 +131,7 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     )
 
 
-@router.get('/reviews/export', response_class=StreamingResponse)
+@router.get('/export/reviews', response_class=StreamingResponse)
 @transaction(1)
 async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
     rows_data = []
@@ -156,7 +156,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
     )
 
 
-@router.get('/complaints/export', response_class=StreamingResponse)
+@router.get('/export/complaints', response_class=StreamingResponse)
 @transaction(1)
 async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
     rows_data = []
