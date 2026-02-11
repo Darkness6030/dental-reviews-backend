@@ -20,6 +20,8 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_owner: bool
     avatar_url: Optional[str]
+    telegram_id: Optional[int]
+    telegram_name: Optional[str]
 
 
 class LoginRequest(BaseModel):
@@ -218,6 +220,10 @@ class ComplaintResponse(BaseModel):
 class ReviewsDashboardResponse(BaseModel):
     reviews: List['ReviewResponse']
     complaints: List['ComplaintResponse']
+
+
+class LinkTelegramResponse(BaseModel):
+    start_link: str
 
 
 def create_doctor_response(doctor: Doctor) -> DoctorResponse:

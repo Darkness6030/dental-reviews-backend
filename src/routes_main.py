@@ -3,6 +3,7 @@ from datetime import datetime
 from io import BytesIO
 from typing import List, Optional
 
+from aiogram.utils.deep_linking import create_start_link
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from rewire import simple_plugin
 from rewire_sqlmodel import transaction
@@ -10,8 +11,9 @@ from starlette.responses import FileResponse, StreamingResponse
 
 from src import auth
 from src.auth import user_required
+from src.bot import get_bot
 from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectResponse, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse, create_complaint_response, create_doctor_response, create_review_response
+from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LinkTelegramResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
@@ -119,7 +121,7 @@ async def get_owner() -> UserResponse:
     return UserResponse(**owner.model_dump())
 
 
-@router.get('/dashboard', response_model=ReviewsDashboardResponse)
+@router.get('/dashboard', response_model=ReviewsDashboardResponse, dependencies=[Depends(user_required)])
 @transaction(1)
 async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
     reviews = await Review.get_all(date_after, date_before)
@@ -131,7 +133,7 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     )
 
 
-@router.get('/export/reviews', response_class=StreamingResponse)
+@router.get('/export/reviews', response_class=StreamingResponse, dependencies=[Depends(user_required)])
 @transaction(1)
 async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
     rows_data = []
@@ -146,7 +148,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
             'Услуга': services_text,
             'Подарок': review.selected_reward.name if review.selected_reward else None,
             'Платформы': platforms_text,
-            'Текст отзыва': review.review_text
+            'Текст отзыва': review.review_text,
         })
 
     excel_bytes = export_rows_to_excel(rows_data)
@@ -156,7 +158,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
     )
 
 
-@router.get('/export/complaints', response_class=StreamingResponse)
+@router.get('/export/complaints', response_class=StreamingResponse, dependencies=[Depends(user_required)])
 @transaction(1)
 async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
     rows_data = []
@@ -166,7 +168,7 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
             'Пациент': complaint.contact_name,
             'Телефон': complaint.contact_phone,
             'Причины': reasons_text,
-            'Текст жалобы': complaint.complaint_text
+            'Текст жалобы': complaint.complaint_text,
         })
 
     excel_bytes = export_rows_to_excel(rows_data)
@@ -174,6 +176,21 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
         BytesIO(excel_bytes),
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
+
+@router.get('/telegram/link', response_model=LinkTelegramResponse)
+@transaction(1)
+async def link_telegram(user: User = Depends(user_required)) -> LinkTelegramResponse:
+    start_link = await create_start_link(get_bot(), str(user.id), encode=True)
+    return LinkTelegramResponse(start_link=start_link)
+
+
+@router.post('/telegram/unlink', status_code=204)
+@transaction(1)
+async def unlink_telegram(user: User = Depends(user_required)):
+    user.telegram_id = None
+    user.telegram_name = None
+    user.add()
 
 
 @router.get('/images/{image_path}', response_class=FileResponse)

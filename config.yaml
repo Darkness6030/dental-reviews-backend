@@ -2,6 +2,8 @@ src:
   auth:
     jwt_secret: !env "JWT_SECRET:"
     jwt_algorithm: !env "JWT_ALGORITHM:"
+  bot:
+    token: !env "BOT_TOKEN:"
   chatgpt:
     api_key: !env "OPENAI_API_KEY:"
     base_url: !env "OPENAI_BASE_URL:"
@@ -26,9 +28,7 @@ rewire_fastapi:
       allow_methods: [ "*" ]
       allow_headers: [ "*" ]
 rewire_sqlmodel:
-  url: !pyexec |
-    from os import getenv
-    return getenv("DATABASE_URL").replace("postgresql://", "postgresql+asyncpg://")
+  url: !pyexec return getenv("DATABASE_URL").replace("sqlite://", "sqlite+aiosqlite://").replace("postgresql://", "postgresql+asyncpg://")
   expire_on_commit: false
   alembic:
     generate: true

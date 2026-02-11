@@ -2,9 +2,9 @@ from datetime import datetime, time
 from typing import List, Optional, Self
 
 import bcrypt
-from rewire_sqlmodel import SQLModel, session_context
+from rewire_sqlmodel import session_context, SQLModel
 from sqlalchemy import update
-from sqlmodel import Field, Relationship, case, desc
+from sqlmodel import case, desc, Field, Relationship
 
 
 class User(SQLModel, table=True):
@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     is_owner: bool = False
     avatar_url: Optional[str] = None
     telegram_id: Optional[int] = None
+    telegram_name: Optional[str] = None
 
     def set_password(self, password: str):
         self.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
