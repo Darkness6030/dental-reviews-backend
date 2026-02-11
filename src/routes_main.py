@@ -1,29 +1,26 @@
 import os
+import uuid
 from datetime import datetime
 from io import BytesIO
 from typing import List, Optional
 
+import aiofiles
 from aiogram.utils.deep_linking import create_start_link
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Query, UploadFile
 from rewire import simple_plugin
-from rewire_sqlmodel import transaction
+from rewire_sqlmodel import session_context, transaction
+from starlette.requests import Request
 from starlette.responses import FileResponse, StreamingResponse
 
 from src import auth
 from src.auth import user_required
 from src.bot import get_bot
 from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LinkTelegramResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UserResponse
+from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LinkTelegramResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UploadImageResponse, UserRequest, UserResponse
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
-
-
-@router.get('/user', response_model=UserResponse)
-@transaction(1)
-async def get_user(user: User = Depends(user_required)) -> UserResponse:
-    return UserResponse(**user.model_dump())
 
 
 @router.post('/login', response_model=LoginResponse)
@@ -37,6 +34,47 @@ async def login(request: LoginRequest) -> LoginResponse:
         user=UserResponse(**user.model_dump()),
         access_token=auth.generate_access_token(user.id)
     )
+
+
+@router.get('/user', response_model=UserResponse)
+@transaction(1)
+async def get_current_user(user: User = Depends(user_required)) -> UserResponse:
+    return UserResponse(**user.model_dump())
+
+
+@router.post('/user/update', response_model=UserResponse)
+@transaction(1)
+async def update_current_user(request: UserRequest, user: User = Depends(user_required)) -> UserResponse:
+    user.sqlmodel_update(request.model_dump())
+    user.add()
+
+    await session_context.get().commit()
+    return UserResponse(**user.model_dump())
+
+
+@router.post('/password/reset', status_code=204)
+@transaction(1)
+async def reset_password(request: ResetPasswordRequest, user: User = Depends(user_required)):
+    if not user.check_password(request.password):
+        raise HTTPException(401, 'Invalid password!')
+
+    user.set_password(request.new_password)
+    user.add()
+
+
+@router.get('/telegram/link', response_model=LinkTelegramResponse)
+@transaction(1)
+async def link_telegram(user: User = Depends(user_required)) -> LinkTelegramResponse:
+    start_link = await create_start_link(get_bot(), str(user.id), encode=True)
+    return LinkTelegramResponse(start_link=start_link)
+
+
+@router.post('/telegram/unlink', status_code=204)
+@transaction(1)
+async def unlink_telegram(user: User = Depends(user_required)):
+    user.telegram_id = None
+    user.telegram_name = None
+    user.add()
 
 
 @router.get('/doctors', response_model=List[DoctorResponse])
@@ -178,19 +216,24 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
     )
 
 
-@router.get('/telegram/link', response_model=LinkTelegramResponse)
+@router.post('/images/upload', response_model=UploadImageResponse, dependencies=[Depends(user_required)])
 @transaction(1)
-async def link_telegram(user: User = Depends(user_required)) -> LinkTelegramResponse:
-    start_link = await create_start_link(get_bot(), str(user.id), encode=True)
-    return LinkTelegramResponse(start_link=start_link)
+async def upload_image_file(request: Request, file: UploadFile = File(...)) -> UploadImageResponse:
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail='Only image files are allowed!')
 
+    extension = os.path.splitext(file.filename)[1]
+    filename = f'{uuid.uuid4().hex}{extension}'
 
-@router.post('/telegram/unlink', status_code=204)
-@transaction(1)
-async def unlink_telegram(user: User = Depends(user_required)):
-    user.telegram_id = None
-    user.telegram_name = None
-    user.add()
+    file_path = os.path.join('images', filename)
+    async with aiofiles.open(file_path, 'wb') as output_file:
+        await output_file.write(await file.read())
+
+    base_url = str(request.base_url).rstrip('/')
+    return UploadImageResponse(
+        filename=filename,
+        image_url=f'{base_url}/api/images/{filename}'
+    )
 
 
 @router.get('/images/{image_path}', response_class=FileResponse)

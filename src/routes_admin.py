@@ -1,17 +1,13 @@
-import os
-import uuid
 from typing import List
 
-import aiofiles
-from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
-from starlette.requests import Request
 
 from src import chatgpt
 from src.auth import admin_required, owner_required
 from src.models import Aspect, Doctor, Platform, Prompt, Reason, Reward, Service, Source, User
-from src.schemas import AspectRequest, AspectResponse, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UploadImageResponse, UserRequest, UserResponse, create_doctor_response
+from src.schemas import AspectRequest, AspectResponse, create_doctor_response, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UserRequest, UserResponse
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -387,26 +383,6 @@ async def test_prompt(request: PromptRequest) -> PromptTestResponse:
     )
 
     return PromptTestResponse(generated_text=generated_text)
-
-
-@router.post('/images/upload', response_model=UploadImageResponse)
-@transaction(1)
-async def upload_image_file(request: Request, file: UploadFile = File(...)) -> UploadImageResponse:
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail='Only image files are allowed!')
-
-    extension = os.path.splitext(file.filename)[1]
-    filename = f'{uuid.uuid4().hex}{extension}'
-
-    file_path = os.path.join('images', filename)
-    async with aiofiles.open(file_path, 'wb') as output_file:
-        await output_file.write(await file.read())
-
-    base_url = str(request.base_url).rstrip('/')
-    return UploadImageResponse(
-        filename=filename,
-        image_url=f'{base_url}/api/images/{filename}'
-    )
 
 
 @plugin.setup()

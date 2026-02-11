@@ -34,6 +34,11 @@ class LoginResponse(BaseModel):
     access_token: str
 
 
+class ResetPasswordRequest(BaseModel):
+    password: str
+    new_password: str
+
+
 class ReorderRequest(BaseModel):
     ordered_ids: List[int]
 
