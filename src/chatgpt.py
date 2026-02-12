@@ -59,29 +59,29 @@ def format_doctors_text(doctors: List[Doctor], services: List[Service]) -> str:
 
 
 def format_review_user_prompt(
-    doctors: List[Doctor],
-    services: List[Service],
-    aspects: List[Aspect],
-    source: Optional[Source]
+        doctors: List[Doctor],
+        services: List[Service],
+        aspects: List[Aspect],
+        source: Optional[Source]
 ) -> str:
     aspects_text = ', '.join(aspect.name for aspect in aspects) if aspects else 'не указано'
     source_text = source.name if source else 'не указано'
 
     return REVIEWS_USER_PROMPT.format(
-        doctors_block=format_doctors_text(doctors, services),
+        doctors_text=format_doctors_text(doctors, services),
         aspects_text=aspects_text,
         source_text=source_text
     )
 
 
 async def generate_review_text(
-    prompt_text: str,
-    temperature: float,
-    frequency_penalty: float,
-    doctors: List[Doctor],
-    services: List[Service],
-    aspects: List[Aspect],
-    source: Optional[Source]
+        prompt_text: str,
+        temperature: float,
+        frequency_penalty: float,
+        doctors: List[Doctor],
+        services: List[Service],
+        aspects: List[Aspect],
+        source: Optional[Source]
 ) -> str:
     user_prompt = format_review_user_prompt(
         doctors=doctors,
@@ -94,9 +94,9 @@ async def generate_review_text(
         model=f'gpt://{Config.project}/yandexgpt/latest',
         temperature=temperature,
         frequency_penalty=frequency_penalty,
-        messages=[
+        messages=[  # type: ignore
             {'role': 'system', 'content': prompt_text},
-            {'role': 'user', 'content': user_prompt}
+            {'role': 'user', 'content': user_prompt},
         ]
     )
 
@@ -108,9 +108,9 @@ async def test_prompt_text(prompt_text: str, temperature: float, frequency_penal
         model=f'gpt://{Config.project}/yandexgpt/latest',
         temperature=temperature,
         frequency_penalty=frequency_penalty,
-        messages=[
+        messages=[  # type: ignore
             {'role': 'system', 'content': prompt_text},
-            {'role': 'user', 'content': TEST_USER_PROMPT}
+            {'role': 'user', 'content': TEST_USER_PROMPT},
         ]
     )
 

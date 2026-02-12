@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.filters.callback_data import CallbackData
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -8,7 +9,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.utils.callback_answer import CallbackAnswerMiddleware
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from pydantic import BaseModel
-from rewire import config, DependenciesModule, simple_plugin
+from rewire import config, DependenciesModule, logger, simple_plugin
 from rewire_sqlmodel import transaction
 
 from src.models import User
@@ -63,7 +64,7 @@ async def start_command(message: Message, command: CommandObject):
         return
 
     user.telegram_id = message.from_user.id
-    user.telegram_name = message.from_user.full_name
+    user.telegram_name = message.from_user.username or message.from_user.full_name
     user.add()
 
     await message.answer(
@@ -89,8 +90,19 @@ async def unlink_account_callback(callback: CallbackQuery, callback_data: Unlink
     )
 
 
-async def send_message(user_id: int, message_text: str):
-    pass
+@transaction(1)
+async def send_admin_message(message_text: str):
+    for user in await User.get_all():
+        if not user.telegram_id:
+            continue
+
+        try:
+            await get_bot().send_message(
+                user.telegram_id,
+                message_text
+            )
+        except TelegramAPIError as e:
+            logger.error(f'Failed to send message to {user.telegram_id}: {e}')
 
 
 def get_bot():

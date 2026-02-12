@@ -1,10 +1,11 @@
-from fastapi import APIRouter, FastAPI, HTTPException
+from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException
 from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
+from src.bot import send_admin_message
 from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source
-from src.schemas import CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest, create_review_response
+from src.schemas import create_review_response, CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api/reviews', tags=['Reviews'])
@@ -127,7 +128,7 @@ async def update_review_text(review_id: int, request: ReviewTextRequest) -> Revi
 
 @router.post('/{review_id}/generate', response_model=ReviewResponse)
 @transaction(1)
-async def generate_review_text(review_id: int) -> ReviewResponse:
+async def generate_review_text(review_id: int, background_tasks: BackgroundTasks) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
     if not review:
         raise HTTPException(404, 'Review not found!')
@@ -148,6 +149,30 @@ async def generate_review_text(review_id: int) -> ReviewResponse:
 
     review.review_text = review_text
     review.add()
+
+    doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors) or '—'
+    services_text = ', '.join(service.name for service in review.selected_services) or '—'
+    aspects_text = ', '.join(aspect.name for aspect in review.selected_aspects) or '—'
+    source_text = review.selected_source.name if review.selected_source else '—'
+
+    message_text = (
+        f'🆕 <b>Сгенерирован новый отзыв</b>\n\n'
+        f'🆔 ID: <b>{review.id}</b>\n'
+        f'📅 Дата: {review.created_at.strftime('%d.%m.%Y %H:%M')}\n\n'
+        f'👤 Имя: {review.contact_name or '—'}\n'
+        f'📞 Телефон: {review.contact_phone or '—'}\n\n'
+        f'👨‍⚕️ Врачи: {doctors_text}\n'
+        f'🛎 Услуги: {services_text}\n'
+        f'⭐ Аспекты: {aspects_text}\n'
+        f'🌐 Источник: {source_text}\n\n'
+        f'📝 <b>Текст отзыва:</b>\n'
+        f'{review.review_text or '—'}'
+    )
+
+    background_tasks.add_task(
+        send_admin_message,
+        message_text
+    )
 
     return create_review_response(review)
 
@@ -189,13 +214,30 @@ async def add_review_platform(review_id: int, platform_id: int) -> ReviewRespons
 
 @router.post('/complaint', response_model=CreateComplaintResponse)
 @transaction(1)
-async def create_complaint(request: CreateComplaintRequest) -> CreateComplaintResponse:
+async def create_complaint(request: CreateComplaintRequest, background_tasks: BackgroundTasks) -> CreateComplaintResponse:
     reasons = await Reason.get_by_ids(request.reason_ids)
     if not reasons:
         raise HTTPException(400, 'Reasons not found!')
 
     complaint = Complaint(**request.model_dump(), selected_reasons=reasons)
     complaint.add()
+
+    reasons_text = ', '.join(reason.name for reason in complaint.selected_reasons) or '—'
+    message_text = (
+        f'🚨 <b>Новая жалоба</b>\n\n'
+        f'🆔 ID: <b>{complaint.id}</b>\n'
+        f'📅 Дата: {complaint.created_at.strftime('%d.%m.%Y %H:%M')}\n\n'
+        f'👤 Имя: {complaint.contact_name or '—'}\n'
+        f'📞 Телефон: {complaint.contact_phone or '—'}\n'
+        f'⚠ Причины: {reasons_text}\n\n'
+        f'📝 <b>Текст жалобы:</b>\n'
+        f'{complaint.complaint_text or '—'}'
+    )
+
+    background_tasks.add_task(
+        send_admin_message,
+        message_text
+    )
 
     await session_context.get().commit()
     return CreateComplaintResponse(**complaint.model_dump())
