@@ -150,6 +150,9 @@ async def generate_review_text(review_id: int, background_tasks: BackgroundTasks
     review.review_text = review_text
     review.add()
 
+    session = session_context.get()
+    await session.commit()
+
     doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors) or '—'
     services_text = ', '.join(service.name for service in review.selected_services) or '—'
     aspects_text = ', '.join(aspect.name for aspect in review.selected_aspects) or '—'
@@ -169,7 +172,6 @@ async def generate_review_text(review_id: int, background_tasks: BackgroundTasks
         f'{review.review_text or '—'}'
     )
 
-    await session_context.get().commit()
     background_tasks.add_task(
         send_alert_message,
         message_text
@@ -223,6 +225,9 @@ async def create_complaint(request: CreateComplaintRequest, background_tasks: Ba
     complaint = Complaint(**request.model_dump(), selected_reasons=reasons)
     complaint.add()
 
+    session = session_context.get()
+    await session.commit()
+
     reasons_text = ', '.join(reason.name for reason in complaint.selected_reasons) or '—'
     message_text = (
         f'🚨 <b>Новая жалоба</b>\n\n'
@@ -235,7 +240,6 @@ async def create_complaint(request: CreateComplaintRequest, background_tasks: Ba
         f'{complaint.complaint_text or 'отсутствует'}'
     )
 
-    await session_context.get().commit()
     background_tasks.add_task(
         send_alert_message,
         message_text

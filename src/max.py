@@ -66,17 +66,22 @@ async def bot_started_handler(event: BotStarted):
 
 
 @dispatcher.message_created(Command('start'))
+@transaction(1)
 async def start_command_handler(event: MessageCreated):
+    user = await User.get_by_max_id(event.from_user.user_id)
+    if not user:
+        return
+
     inline_keyboard = InlineKeyboardBuilder()
     inline_keyboard.add(
         CallbackButton(
             text='❌ Отвязать',
-            payload=UnlinkUserCallback(user_id=event.from_user.user_id).pack()
+            payload=UnlinkUserCallback(user_id=user.id).pack()
         )
     )
 
     await event.message.answer(
-        '✨ Привязка MAX аккаунта подтверждена!\n'
+        f'✨ Привязка MAX к аккаунту <b>«{user.name}»</b> подтверждена!\n'
         'Теперь все уведомления о новых отзывах и жалобах будут направляться сюда.',
         attachments=[inline_keyboard.as_markup()]
     )
@@ -90,10 +95,11 @@ async def unlink_user_callback(event: MessageCallback, payload: UnlinkUserCallba
     user.max_name = None
     user.add()
 
-    await event.message.edit(
+    await event.message.answer(
         f'🛑 MAX успешно отвязан от аккаунта <b>«{user.name}»</b>.\n'
         'Вы больше не будете получать уведомления о новых отзывах и жалобах.'
     )
+    await event.message.delete()
 
 
 async def send_max_message(user_id: int, message_text: str):

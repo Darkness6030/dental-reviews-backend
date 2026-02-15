@@ -35,6 +35,10 @@ class User(SQLModel, table=True):
         return await cls.select().filter_by(username=username).first()
 
     @classmethod
+    async def get_by_max_id(cls, max_id: int) -> Optional[Self]:
+        return await cls.select().filter_by(max_id=max_id).first()
+
+    @classmethod
     async def get_owner(cls) -> Optional[Self]:
         return await cls.select().filter_by(is_owner=True).first()
 
