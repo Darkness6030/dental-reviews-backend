@@ -12,9 +12,9 @@ from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
 from starlette.responses import FileResponse, StreamingResponse
 
-from max import get_max_bot
 from src import auth
 from src.auth import user_required
+from src.max import get_max_bot
 from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
 from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, StartLinkResponse, UploadImageResponse, UserRequest, UserResponse
 from src.telegram import get_telegram_bot

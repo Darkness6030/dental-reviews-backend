@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from rewire import config, DependenciesModule, logger, simple_plugin
 from rewire_sqlmodel import transaction
 
-import auth
+from src import auth
 from src.models import User
 
 
@@ -91,19 +91,11 @@ async def unlink_user_callback(callback: CallbackQuery, callback_data: UnlinkUse
     )
 
 
-@transaction(1)
-async def send_admin_message(message_text: str):
-    for user in await User.get_all():
-        if not user.telegram_id:
-            continue
-
-        try:
-            await get_telegram_bot().send_message(
-                user.telegram_id,
-                message_text
-            )
-        except TelegramAPIError as e:
-            logger.error(f'Failed to send message to {user.telegram_id}: {e}')
+async def send_telegram_message(user_id: int, message_text: str):
+    try:
+        await get_telegram_bot().send_message(chat_id=user_id, text=message_text)
+    except TelegramAPIError as e:
+        logger.error(f'Failed to send message to {user_id}: {e}')
 
 
 def get_telegram_bot() -> Bot:

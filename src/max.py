@@ -2,15 +2,16 @@ from aiohttp import TCPConnector
 from maxapi import Bot, Dispatcher
 from maxapi.client import DefaultConnectionProperties
 from maxapi.enums.parse_mode import ParseMode
+from maxapi.exceptions import MaxApiError
 from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.filters.command import Command
 from maxapi.types import BotStarted, CallbackButton, MessageCallback, MessageCreated
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from pydantic import BaseModel
-from rewire import config, DependenciesModule, simple_plugin
+from rewire import config, DependenciesModule, logger, simple_plugin
 from rewire_sqlmodel import transaction
 
-import auth
+from src import auth
 from src.models import User
 
 
@@ -95,7 +96,11 @@ async def unlink_user_callback(event: MessageCallback, payload: UnlinkUserCallba
     )
 
 
-
+async def send_max_message(user_id: int, message_text: str):
+    try:
+        await get_max_bot().send_message(user_id=user_id, text=message_text)
+    except MaxApiError as e:
+        logger.error(f'Failed to send message to {user_id}: {e}')
 
 
 def get_max_bot() -> Bot:

@@ -4,12 +4,17 @@ from typing import Dict, List
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
+from rewire_sqlmodel import transaction
+
+from src.max import send_max_message
+from src.models import User
+from src.telegram import send_telegram_message
 
 
 def export_rows_to_excel(
-    rows_data: List[Dict],
-    max_column_width: int = 40,
-    width_padding_ratio: float = 0.15
+        rows_data: List[Dict],
+        max_column_width: int = 40,
+        width_padding_ratio: float = 0.15
 ) -> bytes:
     workbook = Workbook()
     worksheet = workbook.active
@@ -43,3 +48,13 @@ def export_rows_to_excel(
     workbook.save(excel_buffer)
     excel_buffer.seek(0)
     return excel_buffer.getvalue()
+
+
+@transaction(1)
+async def send_alert_message(message_text: str):
+    for user in await User.get_all():
+        if user.max_id:
+            await send_max_message(user.max_id, message_text)
+
+        if user.telegram_id:
+            await send_telegram_message(user.telegram_id, message_text)

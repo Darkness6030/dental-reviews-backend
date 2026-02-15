@@ -3,9 +3,9 @@ from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
-from src.telegram import send_admin_message
 from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source
 from src.schemas import create_review_response, CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest
+from src.utils import send_alert_message
 
 plugin = simple_plugin()
 router = APIRouter(prefix='/api/reviews', tags=['Reviews'])
@@ -158,7 +158,7 @@ async def generate_review_text(review_id: int, background_tasks: BackgroundTasks
     message_text = (
         f'🆕 <b>Сгенерирован новый отзыв</b>\n\n'
         f'🆔 ID: <b>{review.id}</b>\n'
-        f'📅 Дата: {review.created_at.strftime('%d.%m.%Y %H:%M')}\n\n'
+        f'📅 Дата: {review.created_at.strftime('%d/%m/%Y %H:%M')}\n\n'
         f'👤 Имя: {review.contact_name or '—'}\n'
         f'📞 Телефон: {review.contact_phone or '—'}\n\n'
         f'👨‍⚕️ Врачи: {doctors_text}\n'
@@ -169,8 +169,9 @@ async def generate_review_text(review_id: int, background_tasks: BackgroundTasks
         f'{review.review_text or '—'}'
     )
 
+    await session_context.get().commit()
     background_tasks.add_task(
-        send_admin_message,
+        send_alert_message,
         message_text
     )
 
@@ -226,20 +227,20 @@ async def create_complaint(request: CreateComplaintRequest, background_tasks: Ba
     message_text = (
         f'🚨 <b>Новая жалоба</b>\n\n'
         f'🆔 ID: <b>{complaint.id}</b>\n'
-        f'📅 Дата: {complaint.created_at.strftime('%d.%m.%Y %H:%M')}\n\n'
-        f'👤 Имя: {complaint.contact_name or '—'}\n'
-        f'📞 Телефон: {complaint.contact_phone or '—'}\n'
+        f'📅 Дата: {complaint.created_at.strftime('%d/%m/%Y %H:%M')}\n\n'
+        f'👤 Имя: {complaint.contact_name or 'анонимно'}\n'
+        f'📞 Телефон: {complaint.contact_phone or 'анонимно'}\n'
         f'⚠ Причины: {reasons_text}\n\n'
         f'📝 <b>Текст жалобы:</b>\n'
-        f'{complaint.complaint_text or '—'}'
-    )
-
-    background_tasks.add_task(
-        send_admin_message,
-        message_text
+        f'{complaint.complaint_text or 'отсутствует'}'
     )
 
     await session_context.get().commit()
+    background_tasks.add_task(
+        send_alert_message,
+        message_text
+    )
+
     return CreateComplaintResponse(**complaint.model_dump())
 
 
