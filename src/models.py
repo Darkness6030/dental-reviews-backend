@@ -15,6 +15,8 @@ class User(SQLModel, table=True):
     is_admin: bool = False
     is_owner: bool = False
     avatar_url: Optional[str] = None
+    max_id: Optional[int] = None
+    max_name: Optional[str] = None
     telegram_id: Optional[int] = None
     telegram_name: Optional[str] = None
 

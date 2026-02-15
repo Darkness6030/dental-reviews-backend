@@ -3,7 +3,7 @@ from rewire import simple_plugin
 from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
-from src.bot import send_admin_message
+from src.telegram import send_admin_message
 from src.models import Aspect, Complaint, Doctor, Platform, Prompt, Reason, Review, Reward, Service, Source
 from src.schemas import create_review_response, CreateComplaintRequest, CreateComplaintResponse, CreateReviewResponse, ReviewAspectsRequest, ReviewContactsRequest, ReviewDoctorsRequest, ReviewResponse, ReviewRewardRequest, ReviewServicesRequest, ReviewSourceRequest, ReviewTextRequest
 

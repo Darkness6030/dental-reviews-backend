@@ -12,11 +12,12 @@ from rewire_sqlmodel import session_context, transaction
 from starlette.requests import Request
 from starlette.responses import FileResponse, StreamingResponse
 
+from max import get_max_bot
 from src import auth
 from src.auth import user_required
-from src.bot import get_bot
 from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LinkTelegramResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, UploadImageResponse, UserRequest, UserResponse
+from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, StartLinkResponse, UploadImageResponse, UserRequest, UserResponse
+from src.telegram import get_telegram_bot
 from src.utils import export_rows_to_excel
 
 plugin = simple_plugin()
@@ -62,11 +63,26 @@ async def reset_password(request: ResetPasswordRequest, user: User = Depends(use
     user.add()
 
 
-@router.get('/telegram/link', response_model=LinkTelegramResponse)
+@router.get('/max/link', response_model=StartLinkResponse)
 @transaction(1)
-async def link_telegram(user: User = Depends(user_required)) -> LinkTelegramResponse:
-    start_link = await create_start_link(get_bot(), str(user.id), encode=True)
-    return LinkTelegramResponse(start_link=start_link)
+async def link_max(user: User = Depends(user_required)) -> StartLinkResponse:
+    bot_user = await get_max_bot().get_me()
+    return StartLinkResponse(start_link=f'https://max.ru/{bot_user.username}?start={auth.encode_user_id(user.id)}')
+
+
+@router.post('/max/unlink', status_code=204)
+@transaction(1)
+async def unlink_max(user: User = Depends(user_required)):
+    user.max_id = None
+    user.max_name = None
+    user.add()
+
+
+@router.get('/telegram/link', response_model=StartLinkResponse)
+@transaction(1)
+async def link_telegram(user: User = Depends(user_required)) -> StartLinkResponse:
+    start_link = await create_start_link(get_telegram_bot(), auth.encode_user_id(user.id))
+    return StartLinkResponse(start_link=start_link)
 
 
 @router.post('/telegram/unlink', status_code=204)

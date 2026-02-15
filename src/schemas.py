@@ -20,6 +20,8 @@ class UserResponse(BaseModel):
     is_admin: bool
     is_owner: bool
     avatar_url: Optional[str]
+    max_id: Optional[int]
+    max_name: Optional[str]
     telegram_id: Optional[int]
     telegram_name: Optional[str]
 
@@ -227,7 +229,7 @@ class ReviewsDashboardResponse(BaseModel):
     complaints: List['ComplaintResponse']
 
 
-class LinkTelegramResponse(BaseModel):
+class StartLinkResponse(BaseModel):
     start_link: str
 
 

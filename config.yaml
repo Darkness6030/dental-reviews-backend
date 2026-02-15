@@ -1,13 +1,15 @@
 src:
   auth:
-    jwt_secret: !env "JWT_SECRET:"
-    jwt_algorithm: !env "JWT_ALGORITHM:"
-  bot:
-    token: !env "BOT_TOKEN:"
+    secret: !env "JWT_SECRET:"
+    algorithm: !env "JWT_ALGORITHM:"
   chatgpt:
     api_key: !env "OPENAI_API_KEY:"
     base_url: !env "OPENAI_BASE_URL:"
     project: !env "OPENAI_PROJECT:"
+  max:
+    token: !env "MAX_TOKEN:"
+  telegram:
+    token: !env "TELEGRAM_TOKEN:"
 rewire:
   log:
     sinks:

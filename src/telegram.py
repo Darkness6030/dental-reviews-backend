@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from rewire import config, DependenciesModule, logger, simple_plugin
 from rewire_sqlmodel import transaction
 
+import auth
 from src.models import User
 
 
@@ -29,8 +30,8 @@ class UnlinkUserCallback(CallbackData, prefix='unlink_user'):
 
 
 @plugin.setup()
-async def create_bot() -> Bot:
-    return Bot(Config.token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+async def create_telegram_bot() -> Bot:
+    return Bot(token=Config.token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 
 
 @plugin.setup()
@@ -49,22 +50,22 @@ def add_middleware(dispatcher: Dispatcher):
 
 
 @plugin.run()
-async def start_bot(bot: Bot, dispatcher: Dispatcher):
+async def start_telegram_bot(bot: Bot, dispatcher: Dispatcher):
     await dispatcher.start_polling(bot)
 
 
-@router.message(CommandStart(deep_link=True, deep_link_encoded=True))
+@router.message(CommandStart())
 @transaction(1)
-async def start_command(message: Message, command: CommandObject):
-    if not command.args.isdigit():
+async def start_command_handler(message: Message, command: CommandObject):
+    if not command.args:
         return
 
-    user = await User.get_by_id(int(command.args))
+    user = await User.get_by_id(auth.decode_user_id(command.args))
     if not user:
         return
 
     user.telegram_id = message.from_user.id
-    user.telegram_name = message.from_user.username or message.from_user.full_name
+    user.telegram_name = message.from_user.full_name
     user.add()
 
     await message.answer(
@@ -78,7 +79,7 @@ async def start_command(message: Message, command: CommandObject):
 
 @router.callback_query(UnlinkUserCallback.filter())
 @transaction(1)
-async def unlink_account_callback(callback: CallbackQuery, callback_data: UnlinkUserCallback):
+async def unlink_user_callback(callback: CallbackQuery, callback_data: UnlinkUserCallback):
     user = await User.get_by_id(callback_data.user_id)
     user.telegram_id = None
     user.telegram_name = None
@@ -97,7 +98,7 @@ async def send_admin_message(message_text: str):
             continue
 
         try:
-            await get_bot().send_message(
+            await get_telegram_bot().send_message(
                 user.telegram_id,
                 message_text
             )
@@ -105,5 +106,5 @@ async def send_admin_message(message_text: str):
             logger.error(f'Failed to send message to {user.telegram_id}: {e}')
 
 
-def get_bot():
+def get_telegram_bot() -> Bot:
     return DependenciesModule.get().resolve(Bot)

@@ -1,13 +1,6 @@
 from alembic import op
-from sqlalchemy.sql.schema import Column
-from sqlalchemy.sql.schema import ForeignKeyConstraint
-from sqlalchemy.sql.schema import MetaData
-from sqlalchemy.sql.schema import PrimaryKeyConstraint
-from sqlalchemy.sql.schema import Table
-from sqlalchemy.sql.sqltypes import Boolean
-from sqlalchemy.sql.sqltypes import DateTime
-from sqlalchemy.sql.sqltypes import Float
-from sqlalchemy.sql.sqltypes import Integer
+from sqlalchemy.sql.schema import Column, ForeignKeyConstraint, MetaData, PrimaryKeyConstraint, Table
+from sqlalchemy.sql.sqltypes import Boolean, DateTime, Float, Integer
 from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
