@@ -185,10 +185,29 @@ class Prompt(SQLModel, table=True):
         return list(await cls.select().order_by(cls.created_at).all())
 
 
-class Review(SQLModel, table=True):
+class DateModel(SQLModel, table=False):
     id: int = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
 
+    @classmethod
+    async def get_by_id(cls, item_id: int) -> Optional[Self]:
+        return await cls.select().filter_by(id=item_id).first()
+
+    @classmethod
+    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List[Self]:
+        query = cls.select()
+        if date_after:
+            date_after = datetime.combine(date_after, time.min)
+            query = query.where(cls.created_at >= date_after)
+
+        if date_before:
+            date_before = datetime.combine(date_before, time.max)
+            query = query.where(cls.created_at <= date_before)
+
+        return list(await query.order_by(cls.created_at).all())
+
+
+class Review(DateModel, table=True):
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     review_text: Optional[str] = None
@@ -223,28 +242,8 @@ class Review(SQLModel, table=True):
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
-    @classmethod
-    async def get_by_id(cls, review_id: int) -> Optional[Self]:
-        return await cls.select().filter_by(id=review_id).first()
 
-    @classmethod
-    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List[Self]:
-        query = cls.select()
-        if date_after:
-            date_after = datetime.combine(date_after, time.min)
-            query = query.where(cls.created_at >= date_after)
-
-        if date_before:
-            date_before = datetime.combine(date_before, time.max)
-            query = query.where(cls.created_at <= date_before)
-
-        return list(await query.order_by(cls.created_at).all())
-
-
-class Complaint(SQLModel, table=True):
-    id: int = Field(primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now)
-
+class Complaint(DateModel, table=True):
     contact_name: Optional[str] = None
     contact_phone: Optional[str] = None
     complaint_text: Optional[str] = None
@@ -253,20 +252,3 @@ class Complaint(SQLModel, table=True):
         link_model=ComplaintReasonLink,
         sa_relationship_kwargs={'lazy': 'selectin'}
     )
-
-    @classmethod
-    async def get_by_id(cls, complaint_id: int) -> Optional[Self]:
-        return await cls.select().filter_by(id=complaint_id).first()
-
-    @classmethod
-    async def get_all(cls, date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> List[Self]:
-        query = cls.select()
-        if date_after:
-            date_after = datetime.combine(date_after, time.min)
-            query = query.where(cls.created_at >= date_after)
-
-        if date_before:
-            date_before = datetime.combine(date_before, time.max)
-            query = query.where(cls.created_at <= date_before)
-
-        return list(await query.order_by(cls.created_at).all())
