@@ -1,3 +1,4 @@
+import asyncio
 from io import BytesIO
 from typing import Dict, List
 
@@ -55,6 +56,8 @@ async def send_alert_message(message_text: str):
     for user in await User.get_all():
         if user.max_id:
             await send_max_message(user.max_id, message_text)
+            await asyncio.sleep(0.1)
 
         if user.telegram_id:
             await send_telegram_message(user.telegram_id, message_text)
+            await asyncio.sleep(0.1)

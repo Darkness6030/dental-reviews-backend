@@ -236,7 +236,10 @@ class StartLinkResponse(BaseModel):
 def create_doctor_response(doctor: Doctor) -> DoctorResponse:
     return DoctorResponse(
         **doctor.model_dump(),
-        services=[ServiceResponse(**service.model_dump()) for service in doctor.services]
+        services=[
+            ServiceResponse(**service.model_dump())
+            for service in doctor.services
+        ]
     )
 
 
