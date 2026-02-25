@@ -141,6 +141,17 @@ class ReasonResponse(BaseModel):
     is_enabled: bool
 
 
+class NewsRequest(BaseModel):
+    title: str
+    is_enabled: bool
+
+
+class NewsResponse(BaseModel):
+    id: int
+    title: str
+    is_enabled: bool
+
+
 class PromptRequest(BaseModel):
     id: str
     prompt_text: str

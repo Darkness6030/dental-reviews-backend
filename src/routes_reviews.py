@@ -11,7 +11,7 @@ plugin = simple_plugin()
 router = APIRouter(prefix='/api/reviews', tags=['Reviews'])
 
 
-@router.post('', response_model=CreateReviewResponse)
+@router.post('')
 @transaction(1)
 async def create_review() -> CreateReviewResponse:
     review = Review()
@@ -21,7 +21,7 @@ async def create_review() -> CreateReviewResponse:
     return CreateReviewResponse(**review.model_dump())
 
 
-@router.get('/{review_id}', response_model=ReviewResponse)
+@router.get('/{review_id}')
 @transaction(1)
 async def get_review(review_id: int) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -31,7 +31,7 @@ async def get_review(review_id: int) -> ReviewResponse:
     return create_review_response(review)
 
 
-@router.post('/{review_id}/doctors', response_model=ReviewResponse)
+@router.post('/{review_id}/doctors')
 @transaction(1)
 async def select_review_doctors(review_id: int, request: ReviewDoctorsRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -48,7 +48,7 @@ async def select_review_doctors(review_id: int, request: ReviewDoctorsRequest) -
     return create_review_response(review)
 
 
-@router.post('/{review_id}/services', response_model=ReviewResponse)
+@router.post('/{review_id}/services')
 @transaction(1)
 async def select_review_services(review_id: int, request: ReviewServicesRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -65,7 +65,7 @@ async def select_review_services(review_id: int, request: ReviewServicesRequest)
     return create_review_response(review)
 
 
-@router.post('/{review_id}/aspects', response_model=ReviewResponse)
+@router.post('/{review_id}/aspects')
 @transaction(1)
 async def select_review_aspects(review_id: int, request: ReviewAspectsRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -82,7 +82,7 @@ async def select_review_aspects(review_id: int, request: ReviewAspectsRequest) -
     return create_review_response(review)
 
 
-@router.post('/{review_id}/source', response_model=ReviewResponse)
+@router.post('/{review_id}/source')
 @transaction(1)
 async def select_review_source(review_id: int, request: ReviewSourceRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -99,7 +99,7 @@ async def select_review_source(review_id: int, request: ReviewSourceRequest) -> 
     return create_review_response(review)
 
 
-@router.post('/{review_id}/contacts', response_model=ReviewResponse)
+@router.post('/{review_id}/contacts')
 @transaction(1)
 async def set_review_contacts(review_id: int, request: ReviewContactsRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -113,7 +113,7 @@ async def set_review_contacts(review_id: int, request: ReviewContactsRequest) ->
     return create_review_response(review)
 
 
-@router.post('/{review_id}/text', response_model=ReviewResponse)
+@router.post('/{review_id}/text')
 @transaction(1)
 async def update_review_text(review_id: int, request: ReviewTextRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -126,7 +126,7 @@ async def update_review_text(review_id: int, request: ReviewTextRequest) -> Revi
     return create_review_response(review)
 
 
-@router.post('/{review_id}/generate', response_model=ReviewResponse)
+@router.post('/{review_id}/generate')
 @transaction(1)
 async def generate_review_text(review_id: int, background_tasks: BackgroundTasks) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -180,7 +180,7 @@ async def generate_review_text(review_id: int, background_tasks: BackgroundTasks
     return create_review_response(review)
 
 
-@router.post('/{review_id}/reward', response_model=ReviewResponse)
+@router.post('/{review_id}/reward')
 @transaction(1)
 async def select_review_reward(review_id: int, request: ReviewRewardRequest) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -197,7 +197,7 @@ async def select_review_reward(review_id: int, request: ReviewRewardRequest) -> 
     return create_review_response(review)
 
 
-@router.post('/{review_id}/platforms/{platform_id}', response_model=ReviewResponse)
+@router.post('/{review_id}/platforms/{platform_id}')
 @transaction(1)
 async def add_review_platform(review_id: int, platform_id: int) -> ReviewResponse:
     review = await Review.get_by_id(review_id)
@@ -215,7 +215,7 @@ async def add_review_platform(review_id: int, platform_id: int) -> ReviewRespons
     return create_review_response(review)
 
 
-@router.post('/complaint', response_model=CreateComplaintResponse)
+@router.post('/complaint')
 @transaction(1)
 async def create_complaint(request: CreateComplaintRequest, background_tasks: BackgroundTasks) -> CreateComplaintResponse:
     reasons = await Reason.get_by_ids(request.reason_ids)

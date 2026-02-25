@@ -15,8 +15,8 @@ from starlette.responses import FileResponse, StreamingResponse
 from src import auth
 from src.auth import user_required
 from src.max import get_max_bot
-from src.models import Aspect, Complaint, Doctor, Platform, Reason, Review, Reward, Service, Source, User
-from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LoginRequest, LoginResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, StartLinkResponse, UploadImageResponse, UserRequest, UserResponse
+from src.models import Aspect, Complaint, Doctor, News, Platform, Reason, Review, Reward, Service, Source, User
+from src.schemas import AspectResponse, create_complaint_response, create_doctor_response, create_review_response, DoctorResponse, LoginRequest, LoginResponse, NewsResponse, PlatformResponse, ReasonResponse, ResetPasswordRequest, ReviewsDashboardResponse, RewardResponse, ServiceResponse, SourceResponse, StartLinkResponse, UploadImageResponse, UserRequest, UserResponse
 from src.telegram import get_telegram_bot
 from src.utils import export_rows_to_excel
 
@@ -24,7 +24,7 @@ plugin = simple_plugin()
 router = APIRouter(prefix='/api', tags=['Main'])
 
 
-@router.post('/login', response_model=LoginResponse)
+@router.post('/login')
 @transaction(1)
 async def login(request: LoginRequest) -> LoginResponse:
     user = await User.get_by_username(request.username)
@@ -37,13 +37,13 @@ async def login(request: LoginRequest) -> LoginResponse:
     )
 
 
-@router.get('/user', response_model=UserResponse)
+@router.get('/user')
 @transaction(1)
 async def get_current_user(user: User = Depends(user_required)) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.post('/user/update', response_model=UserResponse)
+@router.post('/user/update')
 @transaction(1)
 async def update_current_user(request: UserRequest, user: User = Depends(user_required)) -> UserResponse:
     user.sqlmodel_update(request.model_dump())
@@ -63,7 +63,7 @@ async def reset_password(request: ResetPasswordRequest, user: User = Depends(use
     user.add()
 
 
-@router.get('/max/link', response_model=StartLinkResponse)
+@router.get('/max/link')
 @transaction(1)
 async def link_max(user: User = Depends(user_required)) -> StartLinkResponse:
     bot_user = await get_max_bot().get_me()
@@ -78,7 +78,7 @@ async def unlink_max(user: User = Depends(user_required)):
     user.add()
 
 
-@router.get('/telegram/link', response_model=StartLinkResponse)
+@router.get('/telegram/link')
 @transaction(1)
 async def link_telegram(user: User = Depends(user_required)) -> StartLinkResponse:
     start_link = await create_start_link(get_telegram_bot(), auth.encode_user_id(user.id))
@@ -93,7 +93,7 @@ async def unlink_telegram(user: User = Depends(user_required)):
     user.add()
 
 
-@router.get('/doctors', response_model=List[DoctorResponse])
+@router.get('/doctors')
 @transaction(1)
 async def get_doctors() -> List[DoctorResponse]:
     return [
@@ -102,7 +102,7 @@ async def get_doctors() -> List[DoctorResponse]:
     ]
 
 
-@router.get('/services', response_model=List[ServiceResponse])
+@router.get('/services')
 @transaction(1)
 async def get_services() -> List[ServiceResponse]:
     return [
@@ -111,7 +111,7 @@ async def get_services() -> List[ServiceResponse]:
     ]
 
 
-@router.get('/services/doctors', response_model=List[ServiceResponse])
+@router.get('/services/doctors')
 @transaction(1)
 async def get_services_by_doctor_ids(doctor_ids: List[int] = Query(...)) -> List[ServiceResponse]:
     return [
@@ -120,7 +120,7 @@ async def get_services_by_doctor_ids(doctor_ids: List[int] = Query(...)) -> List
     ]
 
 
-@router.get('/aspects', response_model=List[AspectResponse])
+@router.get('/aspects')
 @transaction(1)
 async def get_aspects() -> List[AspectResponse]:
     return [
@@ -129,7 +129,7 @@ async def get_aspects() -> List[AspectResponse]:
     ]
 
 
-@router.get('/sources', response_model=List[SourceResponse])
+@router.get('/sources')
 @transaction(1)
 async def get_sources() -> List[SourceResponse]:
     return [
@@ -138,7 +138,7 @@ async def get_sources() -> List[SourceResponse]:
     ]
 
 
-@router.get('/rewards', response_model=List[RewardResponse])
+@router.get('/rewards')
 @transaction(1)
 async def get_rewards() -> List[RewardResponse]:
     return [
@@ -147,7 +147,7 @@ async def get_rewards() -> List[RewardResponse]:
     ]
 
 
-@router.get('/platforms', response_model=List[PlatformResponse])
+@router.get('/platforms')
 @transaction(1)
 async def get_platforms() -> List[PlatformResponse]:
     return [
@@ -156,7 +156,7 @@ async def get_platforms() -> List[PlatformResponse]:
     ]
 
 
-@router.get('/reasons', response_model=List[ReasonResponse])
+@router.get('/reasons')
 @transaction(1)
 async def get_reasons() -> List[ReasonResponse]:
     return [
@@ -165,7 +165,16 @@ async def get_reasons() -> List[ReasonResponse]:
     ]
 
 
-@router.get('/owner', response_model=UserResponse)
+@router.get('/news')
+@transaction(1)
+async def get_news() -> List[NewsResponse]:
+    return [
+        NewsResponse(**news.model_dump())
+        for news in await News.get_all()
+    ]
+
+
+@router.get('/owner')
 @transaction(1)
 async def get_owner() -> UserResponse:
     owner = await User.get_owner()
@@ -175,7 +184,7 @@ async def get_owner() -> UserResponse:
     return UserResponse(**owner.model_dump())
 
 
-@router.get('/dashboard', response_model=ReviewsDashboardResponse, dependencies=[Depends(user_required)])
+@router.get('/dashboard', dependencies=[Depends(user_required)])
 @transaction(1)
 async def get_dashboard(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> ReviewsDashboardResponse:
     reviews = await Review.get_all(date_after, date_before)
@@ -187,9 +196,9 @@ async def get_dashboard(date_after: Optional[datetime] = None, date_before: Opti
     )
 
 
-@router.get('/export/reviews', response_class=StreamingResponse, dependencies=[Depends(user_required)])
+@router.get('/export/reviews', dependencies=[Depends(user_required)])
 @transaction(1)
-async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None):
+async def export_reviews_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
     rows_data = []
     for review in await Review.get_all(date_after, date_before):
         doctors_text = ', '.join(doctor.name for doctor in review.selected_doctors)
@@ -212,7 +221,7 @@ async def export_reviews_file(date_after: Optional[datetime] = None, date_before
     )
 
 
-@router.get('/export/complaints', response_class=StreamingResponse, dependencies=[Depends(user_required)])
+@router.get('/export/complaints', dependencies=[Depends(user_required)])
 @transaction(1)
 async def export_complaints_file(date_after: Optional[datetime] = None, date_before: Optional[datetime] = None) -> StreamingResponse:
     rows_data = []
@@ -232,7 +241,7 @@ async def export_complaints_file(date_after: Optional[datetime] = None, date_bef
     )
 
 
-@router.post('/images/upload', response_model=UploadImageResponse, dependencies=[Depends(user_required)])
+@router.post('/images/upload', dependencies=[Depends(user_required)])
 @transaction(1)
 async def upload_image_file(request: Request, file: UploadFile = File(...)) -> UploadImageResponse:
     if not file.content_type.startswith('image/'):
@@ -252,7 +261,7 @@ async def upload_image_file(request: Request, file: UploadFile = File(...)) -> U
     )
 
 
-@router.get('/images/{image_path}', response_class=FileResponse)
+@router.get('/images/{image_path}')
 async def get_image_file(image_path: str) -> FileResponse:
     full_path = os.path.join('images', image_path)
     if not os.path.isfile(full_path):

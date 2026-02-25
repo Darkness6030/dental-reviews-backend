@@ -6,8 +6,8 @@ from rewire_sqlmodel import session_context, transaction
 
 from src import chatgpt
 from src.auth import admin_required, owner_required
-from src.models import Aspect, Doctor, Platform, Prompt, Reason, Reward, Service, Source, User
-from src.schemas import AspectRequest, AspectResponse, create_doctor_response, DoctorRequest, DoctorResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UserRequest, UserResponse
+from src.models import Aspect, Doctor, News, Platform, Prompt, Reason, Reward, Service, Source, User
+from src.schemas import AspectRequest, AspectResponse, create_doctor_response, DoctorRequest, DoctorResponse, NewsRequest, NewsResponse, PlatformRequest, PlatformResponse, PromptRequest, PromptResponse, PromptTestResponse, ReasonRequest, ReasonResponse, ReorderRequest, RewardRequest, RewardResponse, ServiceRequest, ServiceResponse, SourceRequest, SourceResponse, UserRequest, UserResponse
 
 plugin = simple_plugin()
 router = APIRouter(
@@ -17,7 +17,7 @@ router = APIRouter(
 )
 
 
-@router.get('/users', dependencies=[Depends(owner_required)], response_model=List[UserResponse])
+@router.get('/users', dependencies=[Depends(owner_required)])
 @transaction(1)
 async def get_users() -> List[UserResponse]:
     return [
@@ -26,7 +26,7 @@ async def get_users() -> List[UserResponse]:
     ]
 
 
-@router.post('/users', dependencies=[Depends(owner_required)], response_model=UserResponse)
+@router.post('/users', dependencies=[Depends(owner_required)])
 @transaction(1)
 async def create_user(request: UserRequest) -> UserResponse:
     user = User(**request.model_dump())
@@ -37,7 +37,7 @@ async def create_user(request: UserRequest) -> UserResponse:
     return UserResponse(**user.model_dump())
 
 
-@router.post('/users/{user_id}', dependencies=[Depends(owner_required)], response_model=UserResponse)
+@router.post('/users/{user_id}', dependencies=[Depends(owner_required)])
 @transaction(1)
 async def update_user(user_id: int, request: UserRequest) -> UserResponse:
     user = await User.get_by_id(user_id)
@@ -63,7 +63,7 @@ async def delete_user(user_id: int):
     await user.delete()
 
 
-@router.post('/doctors', response_model=DoctorResponse)
+@router.post('/doctors')
 @transaction(1)
 async def create_doctor(request: DoctorRequest) -> DoctorResponse:
     services = await Service.get_by_ids(request.service_ids)
@@ -74,7 +74,7 @@ async def create_doctor(request: DoctorRequest) -> DoctorResponse:
     return create_doctor_response(doctor)
 
 
-@router.post('/doctors/{doctor_id}', response_model=DoctorResponse)
+@router.post('/doctors/{doctor_id}')
 @transaction(1)
 async def update_doctor(doctor_id: int, request: DoctorRequest) -> DoctorResponse:
     doctor = await Doctor.get_by_id(doctor_id)
@@ -105,7 +105,7 @@ async def reorder_doctors(request: ReorderRequest):
     await Doctor.reorder(request.ordered_ids)
 
 
-@router.post('/services', response_model=ServiceResponse)
+@router.post('/services')
 @transaction(1)
 async def create_service(request: ServiceRequest) -> ServiceResponse:
     service = Service(**request.model_dump())
@@ -115,7 +115,7 @@ async def create_service(request: ServiceRequest) -> ServiceResponse:
     return ServiceResponse(**service.model_dump())
 
 
-@router.post('/services/{service_id}', response_model=ServiceResponse)
+@router.post('/services/{service_id}')
 @transaction(1)
 async def update_service(service_id: int, request: ServiceRequest) -> ServiceResponse:
     service = await Service.get_by_id(service_id)
@@ -144,7 +144,7 @@ async def reorder_services(request: ReorderRequest):
     await Service.reorder(request.ordered_ids)
 
 
-@router.post('/aspects', response_model=AspectResponse)
+@router.post('/aspects')
 @transaction(1)
 async def create_aspect(request: AspectRequest) -> AspectResponse:
     aspect = Aspect(**request.model_dump())
@@ -154,7 +154,7 @@ async def create_aspect(request: AspectRequest) -> AspectResponse:
     return AspectResponse(**aspect.model_dump())
 
 
-@router.post('/aspects/{aspect_id}', response_model=AspectResponse)
+@router.post('/aspects/{aspect_id}')
 @transaction(1)
 async def update_aspect(aspect_id: int, request: AspectRequest) -> AspectResponse:
     aspect = await Aspect.get_by_id(aspect_id)
@@ -183,7 +183,7 @@ async def reorder_aspects(request: ReorderRequest):
     await Aspect.reorder(request.ordered_ids)
 
 
-@router.post('/sources', response_model=SourceResponse)
+@router.post('/sources')
 @transaction(1)
 async def create_source(request: SourceRequest) -> SourceResponse:
     source = Source(**request.model_dump())
@@ -193,7 +193,7 @@ async def create_source(request: SourceRequest) -> SourceResponse:
     return SourceResponse(**source.model_dump())
 
 
-@router.post('/sources/{source_id}', response_model=SourceResponse)
+@router.post('/sources/{source_id}')
 @transaction(1)
 async def update_source(source_id: int, request: SourceRequest) -> SourceResponse:
     source = await Source.get_by_id(source_id)
@@ -222,7 +222,7 @@ async def reorder_sources(request: ReorderRequest):
     await Source.reorder(request.ordered_ids)
 
 
-@router.post('/rewards', response_model=RewardResponse)
+@router.post('/rewards')
 @transaction(1)
 async def create_reward(request: RewardRequest) -> RewardResponse:
     reward = Reward(**request.model_dump())
@@ -232,7 +232,7 @@ async def create_reward(request: RewardRequest) -> RewardResponse:
     return RewardResponse(**reward.model_dump())
 
 
-@router.post('/rewards/{reward_id}', response_model=RewardResponse)
+@router.post('/rewards/{reward_id}')
 @transaction(1)
 async def update_reward(reward_id: int, request: RewardRequest) -> RewardResponse:
     reward = await Reward.get_by_id(reward_id)
@@ -261,7 +261,7 @@ async def reorder_rewards(request: ReorderRequest):
     await Reward.reorder(request.ordered_ids)
 
 
-@router.post('/platforms', response_model=PlatformResponse)
+@router.post('/platforms')
 @transaction(1)
 async def create_platform(request: PlatformRequest) -> PlatformResponse:
     platform = Platform(**request.model_dump())
@@ -271,7 +271,7 @@ async def create_platform(request: PlatformRequest) -> PlatformResponse:
     return PlatformResponse(**platform.model_dump())
 
 
-@router.post('/platforms/{platform_id}', response_model=PlatformResponse)
+@router.post('/platforms/{platform_id}')
 @transaction(1)
 async def update_platform(platform_id: int, request: PlatformRequest) -> PlatformResponse:
     platform = await Platform.get_by_id(platform_id)
@@ -300,7 +300,7 @@ async def reorder_platforms(request: ReorderRequest):
     await Platform.reorder(request.ordered_ids)
 
 
-@router.post('/reasons', response_model=ReasonResponse)
+@router.post('/reasons')
 @transaction(1)
 async def create_reason(request: ReasonRequest) -> ReasonResponse:
     reason = Reason(**request.model_dump())
@@ -310,7 +310,7 @@ async def create_reason(request: ReasonRequest) -> ReasonResponse:
     return ReasonResponse(**reason.model_dump())
 
 
-@router.post('/reasons/{reason_id}', response_model=ReasonResponse)
+@router.post('/reasons/{reason_id}')
 @transaction(1)
 async def update_reason(reason_id: int, request: ReasonRequest) -> ReasonResponse:
     reason = await Reason.get_by_id(reason_id)
@@ -339,7 +339,46 @@ async def reorder_reasons(request: ReorderRequest):
     await Reason.reorder(request.ordered_ids)
 
 
-@router.get('/prompts', response_model=List[PromptResponse])
+@router.post('/news')
+@transaction(1)
+async def create_news(request: NewsRequest) -> NewsResponse:
+    news = News(**request.model_dump())
+    news.add()
+
+    await session_context.get().commit()
+    return NewsResponse(**news.model_dump())
+
+
+@router.post('/news/{news_id}')
+@transaction(1)
+async def update_news(news_id: int, request: NewsRequest) -> NewsResponse:
+    news = await News.get_by_id(news_id)
+    if not news:
+        raise HTTPException(404, 'News not found!')
+
+    news.sqlmodel_update(request.model_dump())
+    news.add()
+
+    return NewsResponse(**news.model_dump())
+
+
+@router.delete('/news/{news_id}', status_code=204)
+@transaction(1)
+async def delete_news(news_id: int):
+    news = await News.get_by_id(news_id)
+    if not news:
+        raise HTTPException(404, 'News not found!')
+
+    await news.delete()
+
+
+@router.patch('/news/reorder', status_code=204)
+@transaction(1)
+async def reorder_news(request: ReorderRequest):
+    await News.reorder(request.ordered_ids)
+
+
+@router.get('/prompts')
 @transaction(1)
 async def get_prompts() -> List[PromptResponse]:
     return [
@@ -348,7 +387,7 @@ async def get_prompts() -> List[PromptResponse]:
     ]
 
 
-@router.get('/prompts/{prompt_id}', response_model=PromptResponse)
+@router.get('/prompts/{prompt_id}')
 @transaction(1)
 async def get_prompt(prompt_id: str) -> PromptResponse:
     prompt = await Prompt.get_by_id(prompt_id)
@@ -358,7 +397,7 @@ async def get_prompt(prompt_id: str) -> PromptResponse:
     return PromptResponse(**prompt.model_dump())
 
 
-@router.post('/prompts', response_model=PromptResponse)
+@router.post('/prompts')
 @transaction(1)
 async def update_prompt(request: PromptRequest) -> PromptResponse:
     prompt = await Prompt.get_by_id(request.id)
@@ -373,7 +412,7 @@ async def update_prompt(request: PromptRequest) -> PromptResponse:
     return PromptResponse(**prompt.model_dump())
 
 
-@router.post('/prompts/test', response_model=PromptTestResponse)
+@router.post('/prompts/test')
 @transaction(1)
 async def test_prompt(request: PromptRequest) -> PromptTestResponse:
     generated_text = await chatgpt.test_prompt_text(

@@ -168,6 +168,10 @@ class Reason(ItemModel, table=True):
     name: str
 
 
+class News(ItemModel, table=True):
+    title: str
+
+
 class Prompt(SQLModel, table=True):
     id: str = Field(primary_key=True)
     created_at: datetime = Field(default_factory=datetime.now)
